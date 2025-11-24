@@ -58,6 +58,7 @@ jobs:
           echo "✅ Version determined: ${VERSION}"
 
       - name: Restore dependencies
+        shell: bash
         run: dotnet restore
 
       - name: Build and publish
