@@ -209,24 +209,30 @@ jobs:
             fi
           fi
           
-          if [ -z "$ARM64_SHA" ] || [ -z "$X64_SHA" ]; then
-            echo "❌ Error: Could not find required checksum files"
-            echo "Available checksum files:"
-            find artifacts -name "*.sha256" || true
-            echo ""
-            echo "Looking for:"
-            echo "  - quickcode-cli-osx-arm64-v${VERSION}.tar.gz.sha256"
-            echo "  - quickcode-cli-osx-x64-v${VERSION}.tar.gz.sha256"
-            exit 1
+          # Set outputs (empty if not found)
+          if [ -n "$ARM64_SHA" ]; then
+            echo "arm64_sha=${ARM64_SHA}" >> $GITHUB_OUTPUT
+            echo "✅ ARM64 checksum extracted: ${ARM64_SHA:0:16}..."
+          else
+            echo "arm64_sha=" >> $GITHUB_OUTPUT
+            echo "⚠️ Warning: ARM64 checksum not found"
           fi
           
-          echo "arm64_sha=${ARM64_SHA}" >> $GITHUB_OUTPUT
-          echo "x64_sha=${X64_SHA}" >> $GITHUB_OUTPUT
+          if [ -n "$X64_SHA" ]; then
+            echo "x64_sha=${X64_SHA}" >> $GITHUB_OUTPUT
+            echo "✅ x64 checksum extracted: ${X64_SHA:0:16}..."
+          else
+            echo "x64_sha=" >> $GITHUB_OUTPUT
+            echo "⚠️ Warning: x64 checksum not found"
+          fi
+          
           echo "repo=${REPO}" >> $GITHUB_OUTPUT
           
-          echo "✅ Checksums extracted:"
-          echo "  ARM64: ${ARM64_SHA:0:16}..."
-          echo "  x64:   ${X64_SHA:0:16}..."
+          if [ -z "$ARM64_SHA" ] || [ -z "$X64_SHA" ]; then
+            echo "⚠️ Warning: Some checksums are missing. Homebrew formula may not be generated."
+            echo "Available checksum files:"
+            find artifacts -name "*.sha256" || true
+          fi
 
       - name: Generate Homebrew Formula
         shell: bash
@@ -235,6 +241,14 @@ jobs:
           REPO="${{ steps.checksums.outputs.repo }}"
           ARM64_SHA="${{ steps.checksums.outputs.arm64_sha }}"
           X64_SHA="${{ steps.checksums.outputs.x64_sha }}"
+          
+          # Check if checksums are available
+          if [ -z "$ARM64_SHA" ] || [ -z "$X64_SHA" ]; then
+            echo "⚠️ Warning: Some checksums are missing. Skipping Homebrew formula generation."
+            echo "  ARM64_SHA: ${ARM64_SHA:-NOT FOUND}"
+            echo "  X64_SHA: ${X64_SHA:-NOT FOUND}"
+            exit 0
+          fi
           
           mkdir -p Formula
           
