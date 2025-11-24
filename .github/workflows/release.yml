@@ -250,13 +250,13 @@ jobs:
             
             #### macOS (Homebrew)
             ```bash
-            brew tap uzeyirapaydin/quickcode-cli
+            brew tap QuickCodeNet/quickcode-cli
             brew install quickcode-cli
             ```
             
             #### Windows (Scoop)
             ```powershell
-            scoop bucket add quickcode-cli https://github.com/uzeyirapaydin/scoop-bucket
+            scoop bucket add quickcode-cli https://github.com/QuickCodeNet/scoop-bucket
             scoop install quickcode-cli
             ```
             
