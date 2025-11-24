@@ -77,6 +77,14 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           
+          # Validate version
+          if [ -z "$VERSION" ] || [[ "$VERSION" == *"refs/"* ]]; then
+            echo "❌ Error: Invalid version '${VERSION}'. Version must be a valid semver (e.g., 1.0.0)"
+            exit 1
+          fi
+          
+          echo "📦 Creating archive for version: ${VERSION}"
+          
           if [ "${{ matrix.ext }}" = "zip" ]; then
             cd dist/${{ matrix.rid }}
             zip -r ../../quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip . > /dev/null
@@ -84,17 +92,29 @@ jobs:
           else
             tar -czf quickcode-cli-${{ matrix.rid }}-v${VERSION}.tar.gz -C dist/${{ matrix.rid }} .
           fi
+          
+          echo "✅ Archive created successfully"
 
       - name: Generate checksum
         shell: bash
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           
+          # Validate version
+          if [ -z "$VERSION" ] || [[ "$VERSION" == *"refs/"* ]]; then
+            echo "❌ Error: Invalid version '${VERSION}'. Version must be a valid semver (e.g., 1.0.0)"
+            exit 1
+          fi
+          
+          echo "🔐 Generating checksum for version: ${VERSION}"
+          
           if [ "${{ matrix.ext }}" = "zip" ]; then
             sha256sum quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip > quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip.sha256
           else
             sha256sum quickcode-cli-${{ matrix.rid }}-v${VERSION}.tar.gz > quickcode-cli-${{ matrix.rid }}-v${VERSION}.tar.gz.sha256
           fi
+          
+          echo "✅ Checksum generated successfully"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
