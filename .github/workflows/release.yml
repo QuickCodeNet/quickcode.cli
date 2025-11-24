@@ -42,6 +42,21 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            echo "❌ Error: Version cannot be determined. Use workflow_dispatch with version input or push a tag."
+            exit 1
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "✅ Version determined: ${VERSION}"
+
       - name: Restore dependencies
         run: dotnet restore
 
@@ -60,10 +75,7 @@ jobs:
       - name: Create archive
         shell: bash
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          if [ -z "$VERSION" ]; then
-            VERSION=${{ github.event.inputs.version }}
-          fi
+          VERSION="${{ steps.version.outputs.version }}"
           
           if [ "${{ matrix.ext }}" = "zip" ]; then
             cd dist/${{ matrix.rid }}
@@ -76,10 +88,7 @@ jobs:
       - name: Generate checksum
         shell: bash
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          if [ -z "$VERSION" ]; then
-            VERSION=${{ github.event.inputs.version }}
-          fi
+          VERSION="${{ steps.version.outputs.version }}"
           
           if [ "${{ matrix.ext }}" = "zip" ]; then
             sha256sum quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip > quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip.sha256
@@ -116,11 +125,15 @@ jobs:
         shell: bash
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            VERSION="${{ github.event.inputs.version }}"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
           else
-            VERSION=${GITHUB_REF#refs/tags/v}
-            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            echo "❌ Error: Version cannot be determined. Use workflow_dispatch with version input or push a tag."
+            exit 1
           fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "✅ Version determined: ${VERSION}"
 
       - name: Extract checksums
         id: checksums
