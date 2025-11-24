@@ -35,4 +35,3 @@ echo "4. GitHub Actions'dan 'homebrew-formula' artifact'ini indir"
 echo "5. Formula'yı Homebrew Tap repository'sine push et"
 echo ""
 echo "Detaylar için FIRST_RELEASE.md dosyasına bak."
-
