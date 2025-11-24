@@ -200,9 +200,16 @@ jobs:
           retention-days: 90
 
       - name: Update Homebrew Tap (Optional - Auto Push)
-        if: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         shell: bash
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
+          # Check if token exists
+          if [ -z "$HOMEBREW_TAP_TOKEN" ]; then
+            echo "⚠️ HOMEBREW_TAP_TOKEN not set, skipping Homebrew Tap update"
+            exit 0
+          fi
+          
           VERSION="${{ steps.version.outputs.version }}"
           TAP_REPO="QuickCodeNet/homebrew-quickcode-cli"
           
@@ -210,7 +217,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
           # Clone tap repository
-          git clone https://${{ secrets.HOMEBREW_TAP_TOKEN }}@github.com/${TAP_REPO}.git homebrew-tap
+          git clone https://${HOMEBREW_TAP_TOKEN}@github.com/${TAP_REPO}.git homebrew-tap
           cd homebrew-tap
           
           # Create Formula directory if it doesn't exist
