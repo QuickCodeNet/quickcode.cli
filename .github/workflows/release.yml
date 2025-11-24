@@ -122,19 +122,23 @@ jobs:
           echo "🔐 Generating checksum for version: ${VERSION}"
           
           # Detect checksum command (macOS uses shasum, Linux uses sha256sum)
-          if command -v sha256sum &> /dev/null; then
+          if command -v sha256sum >/dev/null 2>&1; then
             CHECKSUM_CMD="sha256sum"
-          elif command -v shasum &> /dev/null; then
+          elif command -v shasum >/dev/null 2>&1; then
             CHECKSUM_CMD="shasum -a 256"
           else
             echo "❌ Error: No checksum command found (sha256sum or shasum)"
+            echo "Available commands:"
+            which sha256sum shasum || true
             exit 1
           fi
           
+          echo "Using checksum command: ${CHECKSUM_CMD}"
+          
           if [ "${{ matrix.ext }}" = "zip" ]; then
-            $CHECKSUM_CMD quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip > quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip.sha256
+            ${CHECKSUM_CMD} quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip > quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip.sha256
           else
-            $CHECKSUM_CMD quickcode-cli-${{ matrix.rid }}-v${VERSION}.tar.gz > quickcode-cli-${{ matrix.rid }}-v${VERSION}.tar.gz.sha256
+            ${CHECKSUM_CMD} quickcode-cli-${{ matrix.rid }}-v${VERSION}.tar.gz > quickcode-cli-${{ matrix.rid }}-v${VERSION}.tar.gz.sha256
           fi
           
           echo "✅ Checksum generated successfully"
