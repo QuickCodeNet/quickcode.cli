@@ -14,8 +14,8 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
         include:
           - os: ubuntu-latest
             rid: linux-x64
@@ -26,10 +26,10 @@ jobs:
           - os: windows-latest
             rid: win-arm64
             ext: zip
-          - os: macos-latest
+          - os: macos-14  # Use specific macOS version for better compatibility
             rid: osx-arm64
             ext: tar.gz
-          - os: macos-latest
+          - os: macos-14
             rid: osx-x64
             ext: tar.gz
 
