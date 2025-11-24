@@ -61,6 +61,7 @@ jobs:
         run: dotnet restore
 
       - name: Build and publish
+        shell: bash
         run: |
           dotnet publish src/QuickCode.Cli/QuickCode.Cli.csproj \
             -c Release \
