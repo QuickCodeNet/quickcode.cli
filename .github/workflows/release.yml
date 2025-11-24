@@ -200,11 +200,11 @@ jobs:
           retention-days: 90
 
       - name: Update Homebrew Tap (Optional - Auto Push)
-        if: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
+        if: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         shell: bash
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          TAP_REPO="uzeyirapaydin/homebrew-quickcode-cli"
+          TAP_REPO="QuickCodeNet/homebrew-quickcode-cli"
           
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
