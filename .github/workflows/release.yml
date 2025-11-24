@@ -175,14 +175,48 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           REPO="${{ github.repository }}"
           
+          echo "🔍 Looking for checksum files for version ${VERSION}..."
+          find artifacts -name "*.sha256" | head -10 || true
+          
           # Find and extract SHA256 from checksum files
           # Artifacts are organized by RID in subdirectories
-          ARM64_SHA=$(find artifacts -name "quickcode-cli-osx-arm64-v${VERSION}.tar.gz.sha256" -exec cat {} \; | awk '{print $1}')
-          X64_SHA=$(find artifacts -name "quickcode-cli-osx-x64-v${VERSION}.tar.gz.sha256" -exec cat {} \; | awk '{print $1}')
+          ARM64_FILE=$(find artifacts -name "quickcode-cli-osx-arm64-v${VERSION}.tar.gz.sha256" -type f | head -1)
+          X64_FILE=$(find artifacts -name "quickcode-cli-osx-x64-v${VERSION}.tar.gz.sha256" -type f | head -1)
+          
+          if [ -n "$ARM64_FILE" ]; then
+            ARM64_SHA=$(cat "$ARM64_FILE" | awk '{print $1}')
+            echo "✅ Found ARM64 checksum: ${ARM64_FILE}"
+          else
+            echo "⚠️ Warning: ARM64 checksum file not found, trying alternative..."
+            # Try to find any osx-arm64 checksum
+            ARM64_FILE=$(find artifacts -path "*/osx-arm64/*" -name "*.sha256" | head -1)
+            if [ -n "$ARM64_FILE" ]; then
+              ARM64_SHA=$(cat "$ARM64_FILE" | awk '{print $1}')
+              echo "✅ Found ARM64 checksum (alternative): ${ARM64_FILE}"
+            fi
+          fi
+          
+          if [ -n "$X64_FILE" ]; then
+            X64_SHA=$(cat "$X64_FILE" | awk '{print $1}')
+            echo "✅ Found x64 checksum: ${X64_FILE}"
+          else
+            echo "⚠️ Warning: x64 checksum file not found, trying alternative..."
+            # Try to find any osx-x64 checksum
+            X64_FILE=$(find artifacts -path "*/osx-x64/*" -name "*.sha256" | head -1)
+            if [ -n "$X64_FILE" ]; then
+              X64_SHA=$(cat "$X64_FILE" | awk '{print $1}')
+              echo "✅ Found x64 checksum (alternative): ${X64_FILE}"
+            fi
+          fi
           
           if [ -z "$ARM64_SHA" ] || [ -z "$X64_SHA" ]; then
-            echo "❌ Error: Could not find checksum files"
+            echo "❌ Error: Could not find required checksum files"
+            echo "Available checksum files:"
             find artifacts -name "*.sha256" || true
+            echo ""
+            echo "Looking for:"
+            echo "  - quickcode-cli-osx-arm64-v${VERSION}.tar.gz.sha256"
+            echo "  - quickcode-cli-osx-x64-v${VERSION}.tar.gz.sha256"
             exit 1
           fi
           
