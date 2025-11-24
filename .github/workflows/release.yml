@@ -164,6 +164,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -193,16 +194,20 @@ jobs:
       - name: Create Tag (if workflow_dispatch)
         if: github.event_name == 'workflow_dispatch'
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           
-          # Check if tag already exists
+          # Check if tag already exists remotely
+          git fetch --tags
           if git rev-parse "v${VERSION}" >/dev/null 2>&1; then
             echo "✅ Tag v${VERSION} already exists"
           else
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git tag -a "v${VERSION}" -m "Release v${VERSION}"
+            git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
             git push origin "v${VERSION}"
             echo "✅ Tag v${VERSION} created and pushed"
           fi
