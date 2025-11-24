@@ -397,7 +397,6 @@ jobs:
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: Release v${{ steps.version.outputs.version }}
-          overwrite: true
           body: |
             ## QuickCode CLI v${{ steps.version.outputs.version }}
             
@@ -429,9 +428,6 @@ jobs:
             ### Homebrew Formula
             The Homebrew formula is available as an artifact in this workflow run. Download it and push to your `homebrew-quickcode-cli` repository.
           files: |
-            artifacts/*.zip
-            artifacts/*.tar.gz
-            artifacts/*.sha256
             artifacts/**/*.zip
             artifacts/**/*.tar.gz
             artifacts/**/*.sha256
