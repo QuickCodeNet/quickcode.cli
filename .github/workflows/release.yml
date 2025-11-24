@@ -121,25 +121,30 @@ jobs:
           
           echo "🔐 Generating checksum for version: ${VERSION}"
           
-          # Detect OS and use appropriate checksum command
+          # Use appropriate checksum command based on OS
           # macOS uses shasum, Linux uses sha256sum
-          if [[ "${{ runner.os }}" == "macOS" ]] || [[ "${{ matrix.os }}" == macos* ]]; then
-            CHECKSUM_CMD="shasum -a 256"
-          else
-            # Linux or other Unix-like systems
-            if command -v sha256sum >/dev/null 2>&1; then
-              CHECKSUM_CMD="sha256sum"
+          if [ "${{ matrix.os }}" == "macos-14" ] || [ "${{ runner.os }}" == "macOS" ]; then
+            # macOS - use shasum
+            if [ "${{ matrix.ext }}" = "zip" ]; then
+              shasum -a 256 quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip > quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip.sha256
             else
-              CHECKSUM_CMD="shasum -a 256"
+              shasum -a 256 quickcode-cli-${{ matrix.rid }}-v${VERSION}.tar.gz > quickcode-cli-${{ matrix.rid }}-v${VERSION}.tar.gz.sha256
             fi
-          fi
-          
-          echo "Using checksum command: ${CHECKSUM_CMD}"
-          
-          if [ "${{ matrix.ext }}" = "zip" ]; then
-            ${CHECKSUM_CMD} quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip > quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip.sha256
           else
-            ${CHECKSUM_CMD} quickcode-cli-${{ matrix.rid }}-v${VERSION}.tar.gz > quickcode-cli-${{ matrix.rid }}-v${VERSION}.tar.gz.sha256
+            # Linux/Windows - use sha256sum if available, otherwise shasum
+            if command -v sha256sum >/dev/null 2>&1; then
+              if [ "${{ matrix.ext }}" = "zip" ]; then
+                sha256sum quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip > quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip.sha256
+              else
+                sha256sum quickcode-cli-${{ matrix.rid }}-v${VERSION}.tar.gz > quickcode-cli-${{ matrix.rid }}-v${VERSION}.tar.gz.sha256
+              fi
+            else
+              if [ "${{ matrix.ext }}" = "zip" ]; then
+                shasum -a 256 quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip > quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip.sha256
+              else
+                shasum -a 256 quickcode-cli-${{ matrix.rid }}-v${VERSION}.tar.gz > quickcode-cli-${{ matrix.rid }}-v${VERSION}.tar.gz.sha256
+              fi
+            fi
           fi
           
           echo "✅ Checksum generated successfully"
