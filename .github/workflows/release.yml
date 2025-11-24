@@ -1,0 +1,271 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+            ext: tar.gz
+          - os: windows-latest
+            rid: win-x64
+            ext: zip
+          - os: windows-latest
+            rid: win-arm64
+            ext: zip
+          - os: macos-latest
+            rid: osx-arm64
+            ext: tar.gz
+          - os: macos-latest
+            rid: osx-x64
+            ext: tar.gz
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build and publish
+        run: |
+          dotnet publish src/QuickCode.Cli/QuickCode.Cli.csproj \
+            -c Release \
+            -r ${{ matrix.rid }} \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:IncludeAllContentForSelfExtract=true \
+            -p:PublishTrimmed=false \
+            -o ./dist/${{ matrix.rid }}
+
+      - name: Create archive
+        shell: bash
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          if [ -z "$VERSION" ]; then
+            VERSION=${{ github.event.inputs.version }}
+          fi
+          
+          if [ "${{ matrix.ext }}" = "zip" ]; then
+            cd dist/${{ matrix.rid }}
+            zip -r ../../quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip . > /dev/null
+            cd ../..
+          else
+            tar -czf quickcode-cli-${{ matrix.rid }}-v${VERSION}.tar.gz -C dist/${{ matrix.rid }} .
+          fi
+
+      - name: Generate checksum
+        shell: bash
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          if [ -z "$VERSION" ]; then
+            VERSION=${{ github.event.inputs.version }}
+          fi
+          
+          if [ "${{ matrix.ext }}" = "zip" ]; then
+            sha256sum quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip > quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip.sha256
+          else
+            sha256sum quickcode-cli-${{ matrix.rid }}-v${VERSION}.tar.gz > quickcode-cli-${{ matrix.rid }}-v${VERSION}.tar.gz.sha256
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: quickcode-cli-${{ matrix.rid }}
+          path: |
+            quickcode-cli-${{ matrix.rid }}-v*.zip
+            quickcode-cli-${{ matrix.rid }}-v*.tar.gz
+            quickcode-cli-${{ matrix.rid }}-v*.sha256
+          if-no-files-found: ignore
+
+  create-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Extract checksums
+        id: checksums
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          REPO="${{ github.repository }}"
+          
+          # Find and extract SHA256 from checksum files
+          # Artifacts are organized by RID in subdirectories
+          ARM64_SHA=$(find artifacts -name "quickcode-cli-osx-arm64-v${VERSION}.tar.gz.sha256" -exec cat {} \; | awk '{print $1}')
+          X64_SHA=$(find artifacts -name "quickcode-cli-osx-x64-v${VERSION}.tar.gz.sha256" -exec cat {} \; | awk '{print $1}')
+          
+          if [ -z "$ARM64_SHA" ] || [ -z "$X64_SHA" ]; then
+            echo "❌ Error: Could not find checksum files"
+            find artifacts -name "*.sha256" || true
+            exit 1
+          fi
+          
+          echo "arm64_sha=${ARM64_SHA}" >> $GITHUB_OUTPUT
+          echo "x64_sha=${X64_SHA}" >> $GITHUB_OUTPUT
+          echo "repo=${REPO}" >> $GITHUB_OUTPUT
+          
+          echo "✅ Checksums extracted:"
+          echo "  ARM64: ${ARM64_SHA:0:16}..."
+          echo "  x64:   ${X64_SHA:0:16}..."
+
+      - name: Generate Homebrew Formula
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          REPO="${{ steps.checksums.outputs.repo }}"
+          ARM64_SHA="${{ steps.checksums.outputs.arm64_sha }}"
+          X64_SHA="${{ steps.checksums.outputs.x64_sha }}"
+          
+          mkdir -p Formula
+          
+          cat > Formula/quickcode-cli.rb << EOF
+          # This file is auto-generated by GitHub Actions
+          # Manual edits will be overwritten on next release
+          
+          class QuickcodeCli < Formula
+            desc "QuickCode API CLI tool"
+            homepage "https://github.com/${REPO}"
+            url "https://github.com/${REPO}/releases/download/v${VERSION}/quickcode-cli-osx-arm64-v${VERSION}.tar.gz"
+            sha256 "${ARM64_SHA}"
+            version "${VERSION}"
+            license "MIT"
+          
+            on_macos do
+              if Hardware::CPU.arm?
+                url "https://github.com/${REPO}/releases/download/v${VERSION}/quickcode-cli-osx-arm64-v${VERSION}.tar.gz"
+                sha256 "${ARM64_SHA}"
+              else
+                url "https://github.com/${REPO}/releases/download/v${VERSION}/quickcode-cli-osx-x64-v${VERSION}.tar.gz"
+                sha256 "${X64_SHA}"
+              end
+            end
+          
+            def install
+              bin.install "quickcode"
+            end
+          
+            test do
+              system "#{bin}/quickcode", "--version"
+            end
+          end
+          EOF
+          
+          echo "✅ Homebrew formula generated: Formula/quickcode-cli.rb"
+
+      - name: Upload Homebrew Formula
+        uses: actions/upload-artifact@v4
+        with:
+          name: homebrew-formula
+          path: Formula/quickcode-cli.rb
+          retention-days: 90
+
+      - name: Update Homebrew Tap (Optional - Auto Push)
+        if: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAP_REPO="uzeyirapaydin/homebrew-quickcode-cli"
+          
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Clone tap repository
+          git clone https://${{ secrets.HOMEBREW_TAP_TOKEN }}@github.com/${TAP_REPO}.git homebrew-tap
+          cd homebrew-tap
+          
+          # Create Formula directory if it doesn't exist
+          mkdir -p Formula
+          
+          # Copy formula
+          cp ../Formula/quickcode-cli.rb Formula/quickcode-cli.rb
+          
+          # Commit and push
+          git add Formula/quickcode-cli.rb
+          git commit -m "Update quickcode-cli to v${VERSION}" || exit 0
+          git push origin main
+          
+          echo "✅ Homebrew Tap updated automatically!"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release v${{ steps.version.outputs.version }}
+          body: |
+            ## QuickCode CLI v${{ steps.version.outputs.version }}
+            
+            ### Downloads
+            - **macOS (Apple Silicon)**: [quickcode-cli-osx-arm64-v${{ steps.version.outputs.version }}.tar.gz](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.version }}/quickcode-cli-osx-arm64-v${{ steps.version.outputs.version }}.tar.gz)
+            - **macOS (Intel)**: [quickcode-cli-osx-x64-v${{ steps.version.outputs.version }}.tar.gz](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.version }}/quickcode-cli-osx-x64-v${{ steps.version.outputs.version }}.tar.gz)
+            - **Windows (x64)**: [quickcode-cli-win-x64-v${{ steps.version.outputs.version }}.zip](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.version }}/quickcode-cli-win-x64-v${{ steps.version.outputs.version }}.zip)
+            - **Windows (ARM64)**: [quickcode-cli-win-arm64-v${{ steps.version.outputs.version }}.zip](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.version }}/quickcode-cli-win-arm64-v${{ steps.version.outputs.version }}.zip)
+            
+            ### Installation
+            
+            #### macOS (Homebrew)
+            ```bash
+            brew tap uzeyirapaydin/quickcode-cli
+            brew install quickcode-cli
+            ```
+            
+            #### Windows (Scoop)
+            ```powershell
+            scoop bucket add quickcode-cli https://github.com/uzeyirapaydin/scoop-bucket
+            scoop install quickcode-cli
+            ```
+            
+            #### Manual Installation
+            1. Download the appropriate archive for your platform
+            2. Extract the archive
+            3. Add the executable to your PATH
+            
+            ### Homebrew Formula
+            The Homebrew formula is available as an artifact in this workflow run. Download it and push to your `homebrew-quickcode-cli` repository.
+          files: |
+            artifacts/**/*.zip
+            artifacts/**/*.tar.gz
+            artifacts/**/*.sha256
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

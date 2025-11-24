@@ -8,62 +8,94 @@ QuickCode.Cli, QuickCode web arayüzündeki tüm akışı terminale taşıyan .N
 ---
 
 ## Ön Koşullar
-- .NET SDK 10.0.100+ (`dotnet --version`)
 - `https://api.quickcode.net/` erişimi
 - Proje bazlı email + secret bilgileri (veya `project forgot-secret` ile e-posta yoluyla edinme)
+
+---
+
+## Kurulum
+
+### macOS (Homebrew) - Önerilen
+```bash
+brew tap uzeyirapaydin/quickcode-cli
+brew install quickcode-cli
+```
+
+### Windows (Scoop) - Önerilen
+```powershell
+scoop bucket add quickcode-cli https://github.com/uzeyirapaydin/scoop-bucket
+scoop install quickcode-cli
+```
+
+### Manuel Kurulum
+1. [GitHub Releases](https://github.com/uzeyirapaydin/quickcode.cli/releases/latest) sayfasından en son sürümü indir
+2. Platformunuza uygun arşivi çıkar:
+   - **macOS (Apple Silicon)**: `quickcode-cli-osx-arm64-v*.tar.gz`
+   - **macOS (Intel)**: `quickcode-cli-osx-x64-v*.tar.gz`
+   - **Windows (x64)**: `quickcode-cli-win-x64-v*.zip`
+   - **Windows (ARM64)**: `quickcode-cli-win-arm64-v*.zip`
+3. Çıkar ve executable'ı PATH'e ekle
+4. Kurulumu doğrula: `quickcode --version`
+
+### Geliştirme Derlemesi
+Kaynak koddan derlemek istersen .NET SDK 10.0.100+ gerekir:
+```bash
+git clone https://github.com/uzeyirapaydin/quickcode.cli.git
+cd quickcode.cli
+dotnet build
+dotnet run --project src/QuickCode.Cli -- --help
+```
 
 ---
 
 ## Hızlı Başlangıç
 CLI’yi repository kökünden (önerilir) veya proje klasörü içinden çalıştırabilirsin. Aşağıdaki komutlar tüm akışı kapsar.
 
-### A Seçeneği – Repository kökünden çalıştır
+### A Seçeneği – Kurulu binary kullan (önerilen)
 ```bash
-cd /Users/uzeyirapaydin/Documents/Projects/quickcode-generator
-
 # 1. Yardım
-dotnet run --project QuickCode.Cli -- --help
+quickcode --help
 
 # 2. Proje bilgilerini kaydet
-dotnet run --project QuickCode.Cli -- config --project demo --set email=demo@quickcode.net
-dotnet run --project QuickCode.Cli -- config --project demo --set secret_code=SECRET123
+quickcode config --project demo --set email=demo@quickcode.net
+quickcode config --project demo --set secret_code=SECRET123
 
 # 3. Proje işlemleri
-dotnet run --project QuickCode.Cli -- project create --name demo --email demo@quickcode.net
-dotnet run --project QuickCode.Cli -- project check --name demo
-dotnet run --project QuickCode.Cli -- project forgot-secret --name demo --email demo@quickcode.net
-dotnet run --project QuickCode.Cli -- project verify-secret --name demo --email demo@quickcode.net --secret-code SECRET123
+quickcode project create --name demo --email demo@quickcode.net
+quickcode project check --name demo
+quickcode project forgot-secret --name demo --email demo@quickcode.net
+quickcode project verify-secret --name demo --email demo@quickcode.net --secret-code SECRET123
 
 # 4. Modül örnekleri
-dotnet run --project QuickCode.Cli -- module list --project demo
-dotnet run --project QuickCode.Cli -- module available
+quickcode module list --project demo
+quickcode module available
 
 # 5. Generate + watch
-dotnet run --project QuickCode.Cli -- generate demo --watch
+quickcode generate demo --watch
 ```
 
-### B Seçeneği – Proje klasöründen çalıştır
-> `QuickCode.Cli` klasörüne girersen `dotnet run -- ...` komutları daha kısa olur.
+### B Seçeneği – Geliştirme modu (kaynak koddan)
+> Geliştirme için veya binary kurmamışsan kullan.
 
 ```bash
-cd /Users/uzeyirapaydin/Documents/Projects/quickcode-generator/QuickCode.Cli
+cd /path/to/quickcode.cli
 
 # 1. Yardım
-dotnet run -- --help
+dotnet run --project src/QuickCode.Cli -- --help
 
 # 2. Proje bilgileri
-dotnet run -- config --project demo --set email=demo@quickcode.net
-dotnet run -- config --project demo --set secret_code=SECRET123
+dotnet run --project src/QuickCode.Cli -- config --project demo --set email=demo@quickcode.net
+dotnet run --project src/QuickCode.Cli -- config --project demo --set secret_code=SECRET123
 
 # 3. Proje işlemleri
-dotnet run -- project create --name demo --email demo@quickcode.net
-dotnet run -- project check --name demo
-dotnet run -- project forgot-secret --name demo --email demo@quickcode.net
-dotnet run -- project verify-secret --name demo --email demo@quickcode.net --secret-code SECRET123
+dotnet run --project src/QuickCode.Cli -- project create --name demo --email demo@quickcode.net
+dotnet run --project src/QuickCode.Cli -- project check --name demo
+dotnet run --project src/QuickCode.Cli -- project forgot-secret --name demo --email demo@quickcode.net
+dotnet run --project src/QuickCode.Cli -- project verify-secret --name demo --email demo@quickcode.net --secret-code SECRET123
 
 # 4. Modül + generate
-dotnet run -- module list --project demo
-dotnet run -- generate demo --watch
+dotnet run --project src/QuickCode.Cli -- module list --project demo
+dotnet run --project src/QuickCode.Cli -- generate demo --watch
 ```
 
 ---
@@ -80,15 +112,15 @@ dotnet run -- generate demo --watch
 
 | Komut | Açıklama | Örnek |
 |-------|----------|-------|
-| `config --set api_url=...` | API adresini değiştir | `dotnet run --project QuickCode.Cli -- config --set api_url=https://api.quickcode.net/` |
-| `config --project demo --set email=... secret_code=...` | Proje email + secret kaydet | `dotnet run --project QuickCode.Cli -- config --project demo --set email=demo@quickcode.net secret_code=SECRET123` |
-| `project create` | Proje oluştur / secret maili | `dotnet run --project QuickCode.Cli -- project create --name demo --email demo@quickcode.net` |
-| `project check` | Proje var mı kontrol et | `dotnet run --project QuickCode.Cli -- project check --name demo` |
-| `project forgot-secret` | Secret kod maili gönder | `dotnet run --project QuickCode.Cli -- project forgot-secret --name demo --email demo@quickcode.net` |
-| `project verify-secret` | Email + secret doğrula | `dotnet run --project QuickCode.Cli -- project verify-secret --name demo --email demo@quickcode.net --secret-code SECRET123` |
-| `module available/list/...` | Modül yönetimi | `dotnet run --project QuickCode.Cli -- module list --project demo` |
-| `generate [--watch]` | Generate başlat ve istersen izle | `dotnet run --project QuickCode.Cli -- generate demo --watch` |
-| `status --session-id` | Session ID ile durumu sorgula | `dotnet run --project QuickCode.Cli -- status --session-id <id>` |
+| `config --set api_url=...` | API adresini değiştir | `quickcode config --set api_url=https://api.quickcode.net/` |
+| `config --project demo --set email=... secret_code=...` | Proje email + secret kaydet | `quickcode config --project demo --set email=demo@quickcode.net secret_code=SECRET123` |
+| `project create` | Proje oluştur / secret maili | `quickcode project create --name demo --email demo@quickcode.net` |
+| `project check` | Proje var mı kontrol et | `quickcode project check --name demo` |
+| `project forgot-secret` | Secret kod maili gönder | `quickcode project forgot-secret --name demo --email demo@quickcode.net` |
+| `project verify-secret` | Email + secret doğrula | `quickcode project verify-secret --name demo --email demo@quickcode.net --secret-code SECRET123` |
+| `module available/list/...` | Modül yönetimi | `quickcode module list --project demo` |
+| `generate [--watch]` | Generate başlat ve istersen izle | `quickcode generate demo --watch` |
+| `status --session-id` | Session ID ile durumu sorgula | `quickcode status --session-id <id>` |
 
 ---
 

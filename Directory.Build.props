@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Company>QuickCode</Company>
+    <Product>QuickCode CLI</Product>
+    <Copyright>Copyright © QuickCode</Copyright>
+    <Authors>uzeyirapaydin</Authors>
+    <Description>QuickCode API CLI tool</Description>
+  </PropertyGroup>
+</Project>
+
