@@ -88,9 +88,20 @@ jobs:
           echo "📦 Creating archive for version: ${VERSION}"
           
           if [ "${{ matrix.ext }}" = "zip" ]; then
-            cd dist/${{ matrix.rid }}
-            zip -r ../../quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip . > /dev/null
-            cd ../..
+            # Try zip first, fallback to PowerShell on Windows if not available
+            if command -v zip &> /dev/null; then
+              cd dist/${{ matrix.rid }}
+              zip -r ../../quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip . > /dev/null
+              cd ../..
+            elif command -v 7z &> /dev/null; then
+              # Use 7-Zip if available (Windows)
+              cd dist/${{ matrix.rid }}
+              7z a -tzip ../../quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip . > /dev/null
+              cd ../..
+            else
+              # Use PowerShell Compress-Archive as fallback (Windows)
+              powershell -Command "Compress-Archive -Path 'dist/${{ matrix.rid }}/*' -DestinationPath 'quickcode-cli-${{ matrix.rid }}-v${VERSION}.zip' -Force"
+            fi
           else
             tar -czf quickcode-cli-${{ matrix.rid }}-v${VERSION}.tar.gz -C dist/${{ matrix.rid }} .
           fi
