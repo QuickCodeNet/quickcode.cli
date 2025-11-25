@@ -23,24 +23,8 @@ public sealed class CliApplication
     private RootCommand BuildRootCommand()
     {
         var verboseOption = new Option<bool>("--verbose", "Show HTTP request/response logs.");
-        var versionOption = new Option<bool>("--version", "Show version information.");
         
-        var root = new RootCommand("QuickCode API CLI") { verboseOption, versionOption };
-        
-        root.SetHandler((bool verbose, bool version) =>
-        {
-            if (version)
-            {
-                var versionInfo = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-                                 ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString()
-                                 ?? "Unknown";
-                Console.WriteLine($"quickcode version {versionInfo}");
-                return;
-            }
-            
-            // If no command provided, show help
-            root.Invoke("--help");
-        }, verboseOption, versionOption);
+        var root = new RootCommand("QuickCode API CLI") { verboseOption };
 
         root.AddCommand(BuildConfigCommand(verboseOption));
         root.AddCommand(BuildProjectCommand(verboseOption));
