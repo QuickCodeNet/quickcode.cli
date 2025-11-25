@@ -1,6 +1,7 @@
 #nullable enable
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Text.Json;
 using QuickCode.Cli.Configuration;
 using QuickCode.Cli.Models;
 using QuickCode.Cli.Services;
@@ -609,6 +610,32 @@ public sealed class CliApplication
                         if (status is not null)
                         {
                             RenderPollingStatus(status);
+                            
+                            // Check if all actions are completed
+                            try
+                            {
+                                var stepsData = await client.GetGenerationStepsAsync();
+                                if (stepsData.ValueKind == JsonValueKind.Object)
+                                {
+                                    // Try to extract allActions from the response
+                                    if (stepsData.TryGetProperty("allActions", out var allActions) ||
+                                        stepsData.TryGetProperty("actions", out allActions))
+                                    {
+                                        if (CliHelpers.AreAllActionsCompleted(allActions))
+                                        {
+                                            Console.WriteLine("✅ All actions completed (HTTP verification). Exiting watcher...");
+                                            cts.Cancel();
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                                // If we can't get actions, fall back to IsFinished check
+                            }
+                            
+                            // Fallback to IsFinished check if action check fails
                             if (status.IsFinished)
                             {
                                 Console.WriteLine("✅ Generation completed (HTTP verification). Exiting watcher...");
@@ -643,15 +670,40 @@ public sealed class CliApplication
             Console.WriteLine("Falling back to HTTP polling...");
 
             var polling = new GenerationPollingService(client);
-            await polling.RunAsync(sessionId, TimeSpan.FromSeconds(2), response =>
+            await polling.RunAsync(sessionId, TimeSpan.FromSeconds(2), async response =>
             {
                 RenderPollingStatus(response);
+                
+                // Check if all actions are completed
+                try
+                {
+                    var stepsData = await client.GetGenerationStepsAsync();
+                    if (stepsData.ValueKind == JsonValueKind.Object)
+                    {
+                        // Try to extract allActions from the response
+                        if (stepsData.TryGetProperty("allActions", out var allActions) ||
+                            stepsData.TryGetProperty("actions", out allActions))
+                        {
+                            if (CliHelpers.AreAllActionsCompleted(allActions))
+                            {
+                                Console.WriteLine("✅ All actions completed. Exiting watcher...");
+                                cts.Cancel();
+                                return;
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // If we can't get actions, fall back to IsFinished check
+                }
+                
+                // Fallback to IsFinished check if action check fails
                 if (response.IsFinished)
                 {
                     Console.WriteLine("✅ Generation completed. Exiting watcher...");
                     cts.Cancel();
                 }
-                return Task.CompletedTask;
             }, cts.Token);
         }
         finally
