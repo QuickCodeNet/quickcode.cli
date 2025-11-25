@@ -132,16 +132,16 @@ homebrew-quickcode-cli/
 ```ruby
 class QuickcodeCli < Formula
   desc "QuickCode API CLI tool"
-  homepage "https://github.com/uzeyirapaydin/quickcode.cli"
-  url "https://github.com/uzeyirapaydin/quickcode.cli/releases/download/v1.0.0/quickcode-cli-osx-arm64.tar.gz"
+  homepage "https://github.com/QuickCodeNet/quickcode.cli"
+  url "https://github.com/QuickCodeNet/quickcode.cli/releases/download/v1.0.0/quickcode-cli-osx-arm64.tar.gz"
   sha256 "checksum-here"
   version "1.0.0"
   
   if Hardware::CPU.arm?
-    url "https://github.com/uzeyirapaydin/quickcode.cli/releases/download/v1.0.0/quickcode-cli-osx-arm64.tar.gz"
+    url "https://github.com/QuickCodeNet/quickcode.cli/releases/download/v1.0.0/quickcode-cli-osx-arm64.tar.gz"
     sha256 "arm64-checksum"
   else
-    url "https://github.com/uzeyirapaydin/quickcode.cli/releases/download/v1.0.0/quickcode-cli-osx-x64.tar.gz"
+    url "https://github.com/QuickCodeNet/quickcode.cli/releases/download/v1.0.0/quickcode-cli-osx-x64.tar.gz"
     sha256 "x64-checksum"
   end
   
@@ -190,15 +190,15 @@ scoop-bucket/
 {
   "version": "1.0.0",
   "description": "QuickCode API CLI tool",
-  "homepage": "https://github.com/uzeyirapaydin/quickcode.cli",
+  "homepage": "https://github.com/QuickCodeNet/quickcode.cli",
   "license": "MIT",
   "architecture": {
     "64bit": {
-      "url": "https://github.com/uzeyirapaydin/quickcode.cli/releases/download/v1.0.0/quickcode-cli-win-x64.zip",
+      "url": "https://github.com/QuickCodeNet/quickcode.cli/releases/download/v1.0.0/quickcode-cli-win-x64.zip",
       "hash": "sha256-checksum-here"
     },
     "arm64": {
-      "url": "https://github.com/uzeyirapaydin/quickcode.cli/releases/download/v1.0.0/quickcode-cli-win-arm64.zip",
+      "url": "https://github.com/QuickCodeNet/quickcode.cli/releases/download/v1.0.0/quickcode-cli-win-arm64.zip",
       "hash": "sha256-checksum-here"
     }
   },
@@ -207,10 +207,10 @@ scoop-bucket/
   "autoupdate": {
     "architecture": {
       "64bit": {
-        "url": "https://github.com/uzeyirapaydin/quickcode.cli/releases/download/v$version/quickcode-cli-win-x64.zip"
+        "url": "https://github.com/QuickCodeNet/quickcode.cli/releases/download/v$version/quickcode-cli-win-x64.zip"
       },
       "arm64": {
-        "url": "https://github.com/uzeyirapaydin/quickcode.cli/releases/download/v$version/quickcode-cli-win-arm64.zip"
+        "url": "https://github.com/QuickCodeNet/quickcode.cli/releases/download/v$version/quickcode-cli-win-arm64.zip"
       }
     }
   }
@@ -241,8 +241,8 @@ scoop update quickcode-cli
     <title>QuickCode CLI</title>
     <authors>uzeyirapaydin</authors>
     <description>QuickCode API CLI tool</description>
-    <projectUrl>https://github.com/uzeyirapaydin/quickcode.cli</projectUrl>
-    <packageSourceUrl>https://github.com/uzeyirapaydin/quickcode.cli</packageSourceUrl>
+    <projectUrl>https://github.com/QuickCodeNet/quickcode.cli</projectUrl>
+    <packageSourceUrl>https://github.com/QuickCodeNet/quickcode.cli</packageSourceUrl>
   </metadata>
   <files>
     <file src="tools\**" target="tools" />
@@ -341,7 +341,7 @@ scoop install quickcode-cli
 ```
 
 ### Manual Installation
-1. [Latest Release](https://github.com/uzeyirapaydin/quickcode.cli/releases/latest) sayfasından binary indir
+1. [Latest Release](https://github.com/QuickCodeNet/quickcode.cli/releases/latest) sayfasından binary indir
 2. Extract et
 3. PATH'e ekle
 ```

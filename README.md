@@ -28,7 +28,7 @@ scoop install quickcode-cli
 ```
 
 ### Manual Installation
-1. Download the latest release from [GitHub Releases](https://github.com/uzeyirapaydin/quickcode.cli/releases/latest)
+1. Download the latest release from [GitHub Releases](https://github.com/QuickCodeNet/quickcode.cli/releases/latest)
 2. Extract the archive for your platform:
    - **macOS (Apple Silicon)**: `quickcode-cli-osx-arm64-v*.tar.gz`
    - **macOS (Intel)**: `quickcode-cli-osx-x64-v*.tar.gz`
@@ -40,7 +40,7 @@ scoop install quickcode-cli
 ### Development Build
 If you want to build from source, you need .NET SDK 10.0.100 or newer:
 ```bash
-git clone https://github.com/uzeyirapaydin/quickcode.cli.git
+git clone https://github.com/QuickCodeNet/quickcode.cli.git
 cd quickcode.cli
 dotnet build
 dotnet run --project src/QuickCode.Cli -- --help

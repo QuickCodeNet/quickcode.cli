@@ -57,8 +57,8 @@ public sealed class QuickCodeApiClient : IDisposable
     public Task<JsonElement> GetProjectModulesAsync(string projectName) =>
         GetAsync<JsonElement>($"api/Dbml/get-project-modules/{projectName}");
 
-    public Task<string> GetModuleDbmlAsync(string projectName, string moduleName, string templateKey) =>
-        GetStringAsync($"api/Dbml/get-module-dbml/{projectName}/{moduleName}/{templateKey}");
+    public Task<string> GetModuleDbmlAsync(string projectName, string moduleName, string templateKey, string projectEmail, string secretCode) =>
+        GetStringAsync($"api/Dbml/get-module-dbml/{projectName}/{moduleName}/{templateKey}/{projectEmail}/{secretCode}");
 
     public Task<bool> AddProjectModuleAsync(
         string projectName,

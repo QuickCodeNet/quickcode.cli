@@ -28,7 +28,7 @@ scoop install quickcode-cli
 ```
 
 ### Manuel Kurulum
-1. [GitHub Releases](https://github.com/uzeyirapaydin/quickcode.cli/releases/latest) sayfasından en son sürümü indir
+1. [GitHub Releases](https://github.com/QuickCodeNet/quickcode.cli/releases/latest) sayfasından en son sürümü indir
 2. Platformunuza uygun arşivi çıkar:
    - **macOS (Apple Silicon)**: `quickcode-cli-osx-arm64-v*.tar.gz`
    - **macOS (Intel)**: `quickcode-cli-osx-x64-v*.tar.gz`
@@ -40,7 +40,7 @@ scoop install quickcode-cli
 ### Geliştirme Derlemesi
 Kaynak koddan derlemek istersen .NET SDK 10.0.100+ gerekir:
 ```bash
-git clone https://github.com/uzeyirapaydin/quickcode.cli.git
+git clone https://github.com/QuickCodeNet/quickcode.cli.git
 cd quickcode.cli
 dotnet build
 dotnet run --project src/QuickCode.Cli -- --help

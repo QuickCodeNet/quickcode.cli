@@ -311,18 +311,23 @@ public sealed class CliApplication
         var projectOption = new Option<string>("--project") { IsRequired = true };
         var moduleNameOption = new Option<string>("--module-name") { IsRequired = true };
         var templateOption = new Option<string>("--template-key") { IsRequired = true };
+        var emailOption = new Option<string>("--email") { IsRequired = true };
+        var secretOption = new Option<string>("--secret-code") { IsRequired = true };
         var outputOption = new Option<FileInfo?>("--output", "File to save DBML.");
 
         command.AddOption(projectOption);
         command.AddOption(moduleNameOption);
         command.AddOption(templateOption);
+        command.AddOption(emailOption);
+        command.AddOption(secretOption);
         command.AddOption(outputOption);
 
-        command.SetHandler(async (string project, string moduleName, string templateKey, FileInfo? output, bool verbose) =>
+        command.SetHandler(async (string project, string moduleName, string templateKey, string projectEmail,
+            string secretCode, FileInfo? output, bool verbose) =>
         {
             var config = _configService.Load();
             using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-            var dbml = await client.GetModuleDbmlAsync(project, moduleName, templateKey);
+            var dbml = await client.GetModuleDbmlAsync(project, moduleName, templateKey, projectEmail, secretCode);
             if (output is not null)
             {
                 await File.WriteAllTextAsync(output.FullName, dbml);
@@ -332,7 +337,7 @@ public sealed class CliApplication
             {
                 Console.WriteLine(dbml);
             }
-        }, projectOption, moduleNameOption, templateOption, outputOption, verboseOption);
+        }, projectOption, moduleNameOption, templateOption, emailOption, secretOption, outputOption, verboseOption);
 
         return command;
     }
