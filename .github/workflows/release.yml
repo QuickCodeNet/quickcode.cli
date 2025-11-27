@@ -55,16 +55,7 @@ jobs:
           elif [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             VERSION="${GITHUB_REF#refs/tags/v}"
           elif [[ "${GITHUB_EVENT_NAME}" = "push" && "${GITHUB_REF}" == refs/heads/* ]]; then
-            VERSION=$(python3 - <<'PY'
-              import xml.etree.ElementTree as ET
-              tree = ET.parse('Directory.Build.props')
-              root = tree.getroot()
-              version = root.find('.//Version')
-              if version is None or not (version.text or '').strip():
-                  raise SystemExit("❌ Error: <Version> not found in Directory.Build.props")
-              print(version.text.strip())
-PY
-)
+            VERSION=$(python3 -c "import sys, xml.etree.ElementTree as ET; tree = ET.parse('Directory.Build.props'); root = tree.getroot(); version = root.find('.//Version'); txt = (version.text or '').strip() if version is not None else ''; sys.exit('❌ Error: <Version> not found in Directory.Build.props' if not txt else 0); print(txt)")
           else
             echo "❌ Error: Version cannot be determined. Use workflow_dispatch with version input or push a tag."
             exit 1
