@@ -60,11 +60,17 @@ quickcode --help
 quickcode config --project demo --set email=demo@quickcode.net
 quickcode config --project demo --set secret_code=SECRET123
 
+# 2a. Validate configuration
+quickcode config validate
+quickcode project validate --name demo
+
 # 3. Project operations
 quickcode project create --name demo --email demo@quickcode.net
 quickcode project check --name demo
 quickcode project forgot-secret --name demo --email demo@quickcode.net
 quickcode project verify-secret --name demo --email demo@quickcode.net --secret-code SECRET123
+quickcode project get-dbmls --name demo
+quickcode project update-dbmls --name demo
 
 # 4. Module listing / editing (examples)
 quickcode module list --project demo
@@ -87,14 +93,23 @@ dotnet run --project src/QuickCode.Cli -- --help
 dotnet run --project src/QuickCode.Cli -- config --project demo --set email=demo@quickcode.net
 dotnet run --project src/QuickCode.Cli -- config --project demo --set secret_code=SECRET123
 
+# 2a. Validate configuration
+dotnet run --project src/QuickCode.Cli -- config validate
+dotnet run --project src/QuickCode.Cli -- project validate --name demo
+
 # 3. Project operations
 dotnet run --project src/QuickCode.Cli -- project create --name demo --email demo@quickcode.net
 dotnet run --project src/QuickCode.Cli -- project check --name demo
 dotnet run --project src/QuickCode.Cli -- project forgot-secret --name demo --email demo@quickcode.net
 dotnet run --project src/QuickCode.Cli -- project verify-secret --name demo --email demo@quickcode.net --secret-code SECRET123
+dotnet run --project src/QuickCode.Cli -- project get-dbmls --name demo
+dotnet run --project src/QuickCode.Cli -- project update-dbmls --name demo
 
-# 4. Module & generation
+# 4. Module listing / editing (examples)
 dotnet run --project src/QuickCode.Cli -- module list --project demo
+dotnet run --project src/QuickCode.Cli -- module available
+
+# 5. Generate and watch
 dotnet run --project src/QuickCode.Cli -- generate demo --watch
 ```
 
@@ -105,6 +120,8 @@ dotnet run --project src/QuickCode.Cli -- generate demo --watch
 - Every project must store its own `email` and `secret_code` via `config --project <name>`.
 - Commands require explicit project name; there are no default_* fallbacks.
 - Config file is stored at `~/.quickcode/config.json`.
+- **Security**: Secret codes are automatically encrypted using AES-256 encryption. The encryption key is stored at `~/.quickcode/.key` with restricted permissions (600).
+- Use `config validate` to check all projects or `project validate --name <project>` to validate a specific project.
 
 ---
 
@@ -113,11 +130,15 @@ dotnet run --project src/QuickCode.Cli -- generate demo --watch
 | Command | Description | Example |
 |---------|-------------|---------|
 | `config --set api_url=...` | Set API endpoint (global) | `quickcode config --set api_url=https://api.quickcode.net/` |
-| `config --project demo --set email=... secret_code=...` | Store project credentials | `quickcode config --project demo --set email=demo@quickcode.net secret_code=SECRET123` |
+| `config --project demo --set email=... secret_code=...` | Store project credentials (secret_code is encrypted) | `quickcode config --project demo --set email=demo@quickcode.net secret_code=SECRET123` |
+| `config validate` | Validate all project configurations | `quickcode config validate` |
 | `project create` | Create project / trigger secret e-mail | `quickcode project create --name demo --email demo@quickcode.net` |
 | `project check` | Check if project exists | `quickcode project check --name demo` |
 | `project forgot-secret` | Send secret reminder mail | `quickcode project forgot-secret --name demo --email demo@quickcode.net` |
 | `project verify-secret` | Validate email + secret combination | `quickcode project verify-secret --name demo --email demo@quickcode.net --secret-code SECRET123` |
+| `project validate --name <project>` | Validate specific project configuration | `quickcode project validate --name demo` |
+| `project get-dbmls --name <project>` | Download project modules to project folder and all template modules to templates subfolder | `quickcode project get-dbmls --name demo` |
+| `project update-dbmls --name <project>` | Upload all DBML files from project folder to API | `quickcode project update-dbmls --name demo` |
 | `module available` | List available templates | `quickcode module available` |
 | `module list/add/remove/get-dbml/save-dbml` | Manage project modules | `quickcode module list --project demo` |
 | `generate [--watch]` | Trigger generation and optionally stream progress | `quickcode generate demo --watch` |
@@ -133,6 +154,13 @@ dotnet run --project src/QuickCode.Cli -- generate demo --watch
 
 ---
 
+## Security Features
+- **Encrypted Secrets**: Secret codes are automatically encrypted using AES-256 encryption before being stored in the configuration file.
+- **Encryption Key**: The encryption key is stored at `~/.quickcode/.key` with restricted file permissions (600 on Unix/macOS).
+- **Automatic Migration**: Existing plain-text secrets are automatically encrypted on first load.
+- **Validation**: Use `config validate` or `project validate --name <project>` to check for missing credentials.
+
 ## Additional Notes
 - Any change in credentials should be applied with `config --project`.
+- Secret codes are never displayed in plain text; they appear as `********` when viewing config.
 - For Turkish instructions read [`README.tr.md`](README.tr.md).

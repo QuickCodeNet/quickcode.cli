@@ -57,8 +57,24 @@ public sealed class QuickCodeApiClient : IDisposable
     public Task<JsonElement> GetProjectModulesAsync(string projectName) =>
         GetAsync<JsonElement>($"api/Dbml/get-project-modules/{projectName}");
 
-    public Task<string> GetModuleDbmlAsync(string projectName, string moduleName, string templateKey, string projectEmail, string secretCode) =>
-        GetStringAsync($"api/Dbml/get-module-dbml/{projectName}/{moduleName}/{templateKey}/{projectEmail}/{secretCode}");
+    public async Task<string> GetModuleDbmlAsync(string projectName, string moduleName, string templateKey, string projectEmail, string secretCode)
+    {
+        var rawString = await GetStringAsync($"api/Dbml/get-module-dbml/{projectName}/{moduleName}/{templateKey}/{projectEmail}/{secretCode}");
+        // API returns JSON-escaped string, so we need to deserialize it to get actual newlines
+        try
+        {
+            return JsonSerializer.Deserialize<string>(rawString, SerializerOptions) ?? rawString;
+        }
+        catch
+        {
+            // If deserialization fails, try to unescape manually
+            return rawString.Replace("\\n", "\n")
+                           .Replace("\\r", "\r")
+                           .Replace("\\t", "\t")
+                           .Replace("\\\"", "\"")
+                           .Replace("\\\\", "\\");
+        }
+    }
 
     public Task<bool> AddProjectModuleAsync(
         string projectName,

@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <Version>1.0.7</Version>
+    <Version>1.0.8</Version>
     <AssemblyVersion>$(Version).0</AssemblyVersion>
     <FileVersion>$(Version).0</FileVersion>
     <InformationalVersion>$(Version)</InformationalVersion>
@@ -8,8 +8,8 @@
     <Company>QuickCode</Company>
     <Product>QuickCode CLI</Product>
     <Copyright>Copyright © QuickCode</Copyright>
-    <Authors>uzeyirapaydin</Authors>
-    <Description>QuickCode API CLI tool</Description>
+    <Authors>Uzeyir Apaydin</Authors>
+    <Description>QuickCode API CLI Tool</Description>
   </PropertyGroup>
 </Project>
 

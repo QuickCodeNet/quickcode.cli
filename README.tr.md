@@ -60,11 +60,17 @@ quickcode --help
 quickcode config --project demo --set email=demo@quickcode.net
 quickcode config --project demo --set secret_code=SECRET123
 
+# 2a. Konfigürasyonu doğrula
+quickcode config validate
+quickcode project validate --name demo
+
 # 3. Proje işlemleri
 quickcode project create --name demo --email demo@quickcode.net
 quickcode project check --name demo
 quickcode project forgot-secret --name demo --email demo@quickcode.net
 quickcode project verify-secret --name demo --email demo@quickcode.net --secret-code SECRET123
+quickcode project get-dbmls --name demo
+quickcode project update-dbmls --name demo
 
 # 4. Modül örnekleri
 quickcode module list --project demo
@@ -87,14 +93,23 @@ dotnet run --project src/QuickCode.Cli -- --help
 dotnet run --project src/QuickCode.Cli -- config --project demo --set email=demo@quickcode.net
 dotnet run --project src/QuickCode.Cli -- config --project demo --set secret_code=SECRET123
 
+# 2a. Konfigürasyonu doğrula
+dotnet run --project src/QuickCode.Cli -- config validate
+dotnet run --project src/QuickCode.Cli -- project validate --name demo
+
 # 3. Proje işlemleri
 dotnet run --project src/QuickCode.Cli -- project create --name demo --email demo@quickcode.net
 dotnet run --project src/QuickCode.Cli -- project check --name demo
 dotnet run --project src/QuickCode.Cli -- project forgot-secret --name demo --email demo@quickcode.net
 dotnet run --project src/QuickCode.Cli -- project verify-secret --name demo --email demo@quickcode.net --secret-code SECRET123
+dotnet run --project src/QuickCode.Cli -- project get-dbmls --name demo
+dotnet run --project src/QuickCode.Cli -- project update-dbmls --name demo
 
-# 4. Modül + generate
+# 4. Modül örnekleri
 dotnet run --project src/QuickCode.Cli -- module list --project demo
+dotnet run --project src/QuickCode.Cli -- module available
+
+# 5. Generate + watch
 dotnet run --project src/QuickCode.Cli -- generate demo --watch
 ```
 
@@ -105,6 +120,8 @@ dotnet run --project src/QuickCode.Cli -- generate demo --watch
 - Her proje için `email` ve `secret_code` mutlaka `config --project <isim>` ile kaydedilmeli.
 - Tüm komutlar proje adını açıkça ister; default_* yok.
 - Konfigürasyon dosyası `~/.quickcode/config.json`.
+- **Güvenlik**: Secret code'lar otomatik olarak AES-256 şifreleme ile şifrelenir. Şifreleme anahtarı `~/.quickcode/.key` dosyasında kısıtlı izinlerle (600) saklanır.
+- Tüm projeleri kontrol etmek için `config validate`, belirli bir projeyi kontrol etmek için `project validate --name <proje>` kullan.
 
 ---
 
@@ -113,11 +130,15 @@ dotnet run --project src/QuickCode.Cli -- generate demo --watch
 | Komut | Açıklama | Örnek |
 |-------|----------|-------|
 | `config --set api_url=...` | API adresini değiştir | `quickcode config --set api_url=https://api.quickcode.net/` |
-| `config --project demo --set email=... secret_code=...` | Proje email + secret kaydet | `quickcode config --project demo --set email=demo@quickcode.net secret_code=SECRET123` |
+| `config --project demo --set email=... secret_code=...` | Proje email + secret kaydet (secret_code şifrelenir) | `quickcode config --project demo --set email=demo@quickcode.net secret_code=SECRET123` |
+| `config validate` | Tüm proje konfigürasyonlarını doğrula | `quickcode config validate` |
 | `project create` | Proje oluştur / secret maili | `quickcode project create --name demo --email demo@quickcode.net` |
 | `project check` | Proje var mı kontrol et | `quickcode project check --name demo` |
 | `project forgot-secret` | Secret kod maili gönder | `quickcode project forgot-secret --name demo --email demo@quickcode.net` |
 | `project verify-secret` | Email + secret doğrula | `quickcode project verify-secret --name demo --email demo@quickcode.net --secret-code SECRET123` |
+| `project validate --name <proje>` | Belirli bir proje konfigürasyonunu doğrula | `quickcode project validate --name demo` |
+| `project get-dbmls --name <proje>` | Proje modüllerini proje klasörüne, tüm template modüllerini templates alt klasörüne indir | `quickcode project get-dbmls --name demo` |
+| `project update-dbmls --name <proje>` | Proje klasöründeki tüm DBML dosyalarını API'ye yükle | `quickcode project update-dbmls --name demo` |
 | `module available/list/...` | Modül yönetimi | `quickcode module list --project demo` |
 | `generate [--watch]` | Generate başlat ve istersen izle | `quickcode generate demo --watch` |
 | `status --session-id` | Session ID ile durumu sorgula | `quickcode status --session-id <id>` |
@@ -132,8 +153,15 @@ dotnet run --project src/QuickCode.Cli -- generate demo --watch
 
 ---
 
+## Güvenlik Özellikleri
+- **Şifrelenmiş Secret'lar**: Secret code'lar konfigürasyon dosyasına kaydedilmeden önce AES-256 şifreleme ile otomatik olarak şifrelenir.
+- **Şifreleme Anahtarı**: Şifreleme anahtarı `~/.quickcode/.key` dosyasında kısıtlı dosya izinleriyle (Unix/macOS'ta 600) saklanır.
+- **Otomatik Migrasyon**: Mevcut düz metin secret'lar ilk yüklemede otomatik olarak şifrelenir.
+- **Validasyon**: Eksik kimlik bilgilerini kontrol etmek için `config validate` veya `project validate --name <proje>` kullan.
+
 ## Ek Notlar
 - Türkçe doküman: `README.tr.md`
 - İngilizce doküman: [`README.md`](README.md)
 - Daha fazla log görmek için `--verbose` bayrağını kullanabilirsin.
+- Secret code'lar asla düz metin olarak gösterilmez; config görüntülenirken `********` olarak görünür.
 
