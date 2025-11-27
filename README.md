@@ -80,8 +80,8 @@ quickcode demo validate
 # 3. Project operations (project-first syntax)
 quickcode demo create --email demo@quickcode.net
 quickcode demo check
-quickcode demo forgot-secret --email demo@quickcode.net
-quickcode demo verify-secret --email demo@quickcode.net --secret-code SECRET123
+quickcode demo forgot-secret [--email demo@quickcode.net]
+quickcode demo verify-secret [--email demo@quickcode.net --secret-code SECRET123]
 quickcode demo get-dbmls
 quickcode demo update-dbmls
 quickcode demo validate

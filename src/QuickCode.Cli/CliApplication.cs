@@ -200,7 +200,7 @@ public sealed class CliApplication
     private Command BuildForgotSecretRootCommand(Option<bool> verboseOption)
     {
         var projectArg = new Argument<string>("project", "Project name.");
-        var emailOption = new Option<string>("--email") { IsRequired = true };
+        var emailOption = new Option<string?>("--email", "Override stored project email.");
 
         var command = new Command("forgot-secret", "Shortcut for 'project forgot-secret'.")
         {
@@ -208,7 +208,7 @@ public sealed class CliApplication
         };
         command.AddOption(emailOption);
 
-        command.SetHandler(async (string project, string email, bool verbose) =>
+        command.SetHandler(async (string project, string? email, bool verbose) =>
         {
             await HandleProjectForgotSecretAsync(project, email, verbose);
         }, projectArg, emailOption, verboseOption);
@@ -219,8 +219,8 @@ public sealed class CliApplication
     private Command BuildVerifySecretRootCommand(Option<bool> verboseOption)
     {
         var projectArg = new Argument<string>("project", "Project name.");
-        var emailOption = new Option<string>("--email") { IsRequired = true };
-        var secretOption = new Option<string>("--secret-code") { IsRequired = true };
+        var emailOption = new Option<string?>("--email", "Override stored project email.");
+        var secretOption = new Option<string?>("--secret-code", "Override stored project secret code.");
 
         var command = new Command("verify-secret", "Shortcut for 'project verify-secret'.")
         {
@@ -230,7 +230,7 @@ public sealed class CliApplication
         command.AddOption(emailOption);
         command.AddOption(secretOption);
 
-        command.SetHandler(async (string project, string email, string secret, bool verbose) =>
+        command.SetHandler(async (string project, string? email, string? secret, bool verbose) =>
         {
             await HandleProjectVerifySecretAsync(project, email, secret, verbose);
         }, projectArg, emailOption, secretOption, verboseOption);
@@ -333,14 +333,14 @@ public sealed class CliApplication
     {
         var command = new Command("verify-secret", "Verify project email and secret code combination");
         var nameOption = new Option<string>("--name") { IsRequired = true };
-        var emailOption = new Option<string>("--email") { IsRequired = true };
-        var secretOption = new Option<string>("--secret-code") { IsRequired = true };
+        var emailOption = new Option<string?>("--email", "Override stored project email.");
+        var secretOption = new Option<string?>("--secret-code", "Override stored project secret code.");
 
         command.AddOption(nameOption);
         command.AddOption(emailOption);
         command.AddOption(secretOption);
 
-        command.SetHandler(async (string name, string email, string secret, bool verbose) =>
+        command.SetHandler(async (string name, string? email, string? secret, bool verbose) =>
         {
             await HandleProjectVerifySecretAsync(name, email, secret, verbose);
         }, nameOption, emailOption, secretOption, verboseOption);
@@ -382,12 +382,12 @@ public sealed class CliApplication
     {
         var command = new Command("forgot-secret", "Request secret code reminder email");
         var nameOption = new Option<string>("--name") { IsRequired = true };
-        var emailOption = new Option<string>("--email") { IsRequired = true };
+        var emailOption = new Option<string?>("--email", "Override stored project email.");
 
         command.AddOption(nameOption);
         command.AddOption(emailOption);
 
-        command.SetHandler(async (string name, string email, bool verbose) =>
+        command.SetHandler(async (string name, string? email, bool verbose) =>
         {
             await HandleProjectForgotSecretAsync(name, email, verbose);
         }, nameOption, emailOption, verboseOption);
@@ -609,7 +609,7 @@ public sealed class CliApplication
         var emailOption = new Option<string?>("--email", "Override project email.");
         var secretOption = new Option<string?>("--secret-code", "Override secret code.");
         var sessionOption = new Option<string?>("--session-id", "Custom session id.");
-        var watchOption = new Option<bool>("--watch", "Watch generation progress.");
+        var watchOption = new Option<bool>("--watch", () => true, "Watch generation progress (defaults to enabled).");
 
         command.AddArgument(projectArg);
         command.AddOption(emailOption);
@@ -687,24 +687,48 @@ public sealed class CliApplication
             : $"❌ Project '{projectName}' not found.");
     }
 
-    private async Task HandleProjectForgotSecretAsync(string projectName, string email, bool verbose)
+    private async Task HandleProjectForgotSecretAsync(string projectName, string? email, bool verbose)
     {
         var config = _configService.Load();
+        var resolvedEmail = email;
+
+        if (string.IsNullOrWhiteSpace(resolvedEmail))
+        {
+            if (config.Projects.TryGetValue(projectName, out var projectConfig) &&
+                !string.IsNullOrWhiteSpace(projectConfig.Email))
+            {
+                resolvedEmail = projectConfig.Email;
+            }
+            else
+            {
+                Console.WriteLine($"❌ Email not configured for '{projectName}'. Set it via 'quickcode {projectName} config --set email=...' or pass --email.");
+                return;
+            }
+        }
+
         using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-        var result = await client.ForgotSecretCodeAsync(projectName, email);
+        var result = await client.ForgotSecretCodeAsync(projectName, resolvedEmail);
         Console.WriteLine(result
             ? "✅ Secret code reminder sent."
             : "⚠️ Could not send secret code reminder.");
     }
 
-    private async Task HandleProjectVerifySecretAsync(string projectName, string email, string secret, bool verbose)
+    private async Task HandleProjectVerifySecretAsync(string projectName, string? email, string? secret, bool verbose)
     {
         var config = _configService.Load();
-        using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-        var isValid = await client.CheckSecretCodeAsync(projectName, email, secret);
-        Console.WriteLine(isValid
-            ? "✅ Secret code is valid."
-            : "❌ Secret code is invalid.");
+        try
+        {
+            var (_, resolvedEmail, resolvedSecret) = _configService.ResolveProjectCredentials(config, projectName, email, secret);
+            using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
+            var isValid = await client.CheckSecretCodeAsync(projectName, resolvedEmail, resolvedSecret);
+            Console.WriteLine(isValid
+                ? "✅ Secret code is valid."
+                : "❌ Secret code is invalid.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"❌ {ex.Message}");
+        }
     }
 
     private async Task HandleProjectDownloadDbmlsAsync(string projectName, string? email, string? secret, bool verbose)
