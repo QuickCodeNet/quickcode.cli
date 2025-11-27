@@ -21,6 +21,19 @@ brew tap uzeyirapaydin/quickcode-cli
 brew install quickcode-cli
 ```
 
+> Update to latest version when a new release is available:
+```bash
+brew update
+brew upgrade quickcode-cli
+```
+
+If `brew` shows a conflict/syntax error, reset the tap and try again:
+```bash
+rm -rf /opt/homebrew/Library/Taps/quickcodenet/homebrew-quickcode-cli
+brew tap quickcodenet/quickcode-cli
+brew upgrade quickcode-cli
+```
+
 ### Windows (Scoop) - Recommended
 ```powershell
 scoop bucket add quickcode-cli https://github.com/uzeyirapaydin/scoop-bucket
@@ -57,27 +70,28 @@ You can run the CLI either from the repository root (recommended) or from inside
 quickcode --help
 
 # 2. Store project credentials
-quickcode config --project demo --set email=demo@quickcode.net
-quickcode config --project demo --set secret_code=SECRET123
+quickcode demo config --set email=demo@quickcode.net
+quickcode demo config --set secret_code=SECRET123
 
 # 2a. Validate configuration
 quickcode config validate
-quickcode project validate --name demo
+quickcode demo validate
 
-# 3. Project operations
-quickcode project create --name demo --email demo@quickcode.net
-quickcode project check --name demo
-quickcode project forgot-secret --name demo --email demo@quickcode.net
-quickcode project verify-secret --name demo --email demo@quickcode.net --secret-code SECRET123
-quickcode project get-dbmls --name demo
-quickcode project update-dbmls --name demo
+# 3. Project operations (project-first syntax)
+quickcode demo create --email demo@quickcode.net
+quickcode demo check
+quickcode demo forgot-secret --email demo@quickcode.net
+quickcode demo verify-secret --email demo@quickcode.net --secret-code SECRET123
+quickcode demo get-dbmls
+quickcode demo update-dbmls
+quickcode demo validate
 
 # 4. Module listing / editing (examples)
-quickcode module list --project demo
-quickcode module available
+quickcode demo modules
+quickcode templates
 
 # 5. Generate and watch
-quickcode generate demo --watch
+quickcode demo generate --watch
 ```
 
 ### Option B – Development mode (from source)
@@ -90,27 +104,28 @@ cd /path/to/quickcode.cli
 dotnet run --project src/QuickCode.Cli -- --help
 
 # 2. Store project credentials
-dotnet run --project src/QuickCode.Cli -- config --project demo --set email=demo@quickcode.net
-dotnet run --project src/QuickCode.Cli -- config --project demo --set secret_code=SECRET123
+dotnet run --project src/QuickCode.Cli -- demo config --set email=demo@quickcode.net
+dotnet run --project src/QuickCode.Cli -- demo config --set secret_code=SECRET123
 
 # 2a. Validate configuration
 dotnet run --project src/QuickCode.Cli -- config validate
-dotnet run --project src/QuickCode.Cli -- project validate --name demo
+dotnet run --project src/QuickCode.Cli -- demo validate
 
-# 3. Project operations
-dotnet run --project src/QuickCode.Cli -- project create --name demo --email demo@quickcode.net
-dotnet run --project src/QuickCode.Cli -- project check --name demo
-dotnet run --project src/QuickCode.Cli -- project forgot-secret --name demo --email demo@quickcode.net
-dotnet run --project src/QuickCode.Cli -- project verify-secret --name demo --email demo@quickcode.net --secret-code SECRET123
-dotnet run --project src/QuickCode.Cli -- project get-dbmls --name demo
-dotnet run --project src/QuickCode.Cli -- project update-dbmls --name demo
+# 3. Project operations (project-first syntax)
+dotnet run --project src/QuickCode.Cli -- demo create --email demo@quickcode.net
+dotnet run --project src/QuickCode.Cli -- demo check
+dotnet run --project src/QuickCode.Cli -- demo forgot-secret --email demo@quickcode.net
+dotnet run --project src/QuickCode.Cli -- demo verify-secret --email demo@quickcode.net --secret-code SECRET123
+dotnet run --project src/QuickCode.Cli -- demo get-dbmls
+dotnet run --project src/QuickCode.Cli -- demo update-dbmls
+dotnet run --project src/QuickCode.Cli -- demo validate
 
 # 4. Module listing / editing (examples)
-dotnet run --project src/QuickCode.Cli -- module list --project demo
-dotnet run --project src/QuickCode.Cli -- module available
+dotnet run --project src/QuickCode.Cli -- demo modules
+dotnet run --project src/QuickCode.Cli -- templates
 
 # 5. Generate and watch
-dotnet run --project src/QuickCode.Cli -- generate demo --watch
+dotnet run --project src/QuickCode.Cli -- demo generate --watch
 ```
 
 ---

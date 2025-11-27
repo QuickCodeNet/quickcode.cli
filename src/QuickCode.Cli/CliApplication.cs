@@ -29,6 +29,14 @@ public sealed class CliApplication
         root.AddCommand(BuildConfigCommand(verboseOption));
         root.AddCommand(BuildProjectCommand(verboseOption));
         root.AddCommand(BuildModuleCommand(verboseOption));
+        root.AddCommand(BuildCreateRootCommand(verboseOption));
+        root.AddCommand(BuildCheckRootCommand(verboseOption));
+        root.AddCommand(BuildForgotSecretRootCommand(verboseOption));
+        root.AddCommand(BuildVerifySecretRootCommand(verboseOption));
+        root.AddCommand(BuildGetDbmlsRootCommand(verboseOption));
+        root.AddCommand(BuildUpdateDbmlsRootCommand(verboseOption));
+        root.AddCommand(BuildValidateRootCommand(verboseOption));
+        root.AddCommand(BuildTemplatesRootCommand(verboseOption));
         root.AddCommand(BuildGenerateCommand(verboseOption));
         root.AddCommand(BuildStatusCommand(verboseOption));
 
@@ -53,7 +61,18 @@ public sealed class CliApplication
 
         var validateCommand = new Command("validate", "Validate project configurations");
         
-        var command = new Command("config", "Manage CLI configuration")
+        var command = new Command(
+            "config",
+            """
+            Manage CLI configuration.
+            
+            Subcommands:
+              validate          Validate all project credentials.
+            
+            Options:
+              --set             key=value pairs (global or --project scoped).
+              --project         Apply changes to a specific project.
+            """)
         {
             projectOption,
             setOption,
@@ -117,7 +136,20 @@ public sealed class CliApplication
 
     private Command BuildProjectCommand(Option<bool> verboseOption)
     {
-        var project = new Command("project", "Manage QuickCode projects");
+        var project = new Command(
+            "project",
+            """
+            Manage QuickCode projects.
+            
+            Subcommands:
+              create          Create project / request secret email.
+              check           Check if a project exists.
+              forgot-secret   Send secret reminder email.
+              verify-secret   Verify email + secret combination.
+              get-dbmls       Download project & template DBML files.
+              update-dbmls    Upload DBML files back to the API.
+              validate        Validate stored project credentials.
+            """);
 
         project.AddCommand(BuildProjectCreateCommand(verboseOption));
         project.AddCommand(BuildProjectCheckCommand(verboseOption));
@@ -128,6 +160,156 @@ public sealed class CliApplication
         project.AddCommand(BuildProjectUpdateDbmlsCommand(verboseOption));
 
         return project;
+    }
+
+    private Command BuildCreateRootCommand(Option<bool> verboseOption)
+    {
+        var projectArg = new Argument<string>("project", "Project name.");
+        var command = new Command("create", "Shortcut for 'project create'.")
+        {
+            projectArg
+        };
+
+        var emailOption = new Option<string>("--email", "Project email") { IsRequired = true };
+        command.AddOption(emailOption);
+
+        command.SetHandler(async (string project, string email, bool verbose) =>
+        {
+            await HandleProjectCreateAsync(project, email, verbose);
+        }, projectArg, emailOption, verboseOption);
+
+        return command;
+    }
+
+    private Command BuildCheckRootCommand(Option<bool> verboseOption)
+    {
+        var projectArg = new Argument<string>("project", "Project name.");
+        var command = new Command("check", "Shortcut for 'project check'.")
+        {
+            projectArg
+        };
+
+        command.SetHandler(async (string project, bool verbose) =>
+        {
+            await HandleProjectCheckAsync(project, verbose);
+        }, projectArg, verboseOption);
+
+        return command;
+    }
+
+    private Command BuildForgotSecretRootCommand(Option<bool> verboseOption)
+    {
+        var projectArg = new Argument<string>("project", "Project name.");
+        var emailOption = new Option<string>("--email") { IsRequired = true };
+
+        var command = new Command("forgot-secret", "Shortcut for 'project forgot-secret'.")
+        {
+            projectArg
+        };
+        command.AddOption(emailOption);
+
+        command.SetHandler(async (string project, string email, bool verbose) =>
+        {
+            await HandleProjectForgotSecretAsync(project, email, verbose);
+        }, projectArg, emailOption, verboseOption);
+
+        return command;
+    }
+
+    private Command BuildVerifySecretRootCommand(Option<bool> verboseOption)
+    {
+        var projectArg = new Argument<string>("project", "Project name.");
+        var emailOption = new Option<string>("--email") { IsRequired = true };
+        var secretOption = new Option<string>("--secret-code") { IsRequired = true };
+
+        var command = new Command("verify-secret", "Shortcut for 'project verify-secret'.")
+        {
+            projectArg
+        };
+
+        command.AddOption(emailOption);
+        command.AddOption(secretOption);
+
+        command.SetHandler(async (string project, string email, string secret, bool verbose) =>
+        {
+            await HandleProjectVerifySecretAsync(project, email, secret, verbose);
+        }, projectArg, emailOption, secretOption, verboseOption);
+
+        return command;
+    }
+
+    private Command BuildGetDbmlsRootCommand(Option<bool> verboseOption)
+    {
+        var projectArg = new Argument<string>("project", "Project name.");
+        var emailOption = new Option<string?>("--email", "Override project email.");
+        var secretOption = new Option<string?>("--secret-code", "Override project secret code.");
+
+        var command = new Command("get-dbmls", "Shortcut for 'project get-dbmls'.")
+        {
+            projectArg
+        };
+        command.AddOption(emailOption);
+        command.AddOption(secretOption);
+
+        command.SetHandler(async (string project, string? email, string? secret, bool verbose) =>
+        {
+            await HandleProjectDownloadDbmlsAsync(project, email, secret, verbose);
+        }, projectArg, emailOption, secretOption, verboseOption);
+
+        return command;
+    }
+
+    private Command BuildUpdateDbmlsRootCommand(Option<bool> verboseOption)
+    {
+        var projectArg = new Argument<string>("project", "Project name.");
+        var emailOption = new Option<string?>("--email", "Override project email.");
+        var secretOption = new Option<string?>("--secret-code", "Override project secret code.");
+
+        var command = new Command("update-dbmls", "Shortcut for 'project update-dbmls'.")
+        {
+            projectArg
+        };
+        command.AddOption(emailOption);
+        command.AddOption(secretOption);
+
+        command.SetHandler(async (string project, string? email, string? secret, bool verbose) =>
+        {
+            await HandleProjectUpdateDbmlsAsync(project, email, secret, verbose);
+        }, projectArg, emailOption, secretOption, verboseOption);
+
+        return command;
+    }
+
+    private Command BuildValidateRootCommand(Option<bool> verboseOption)
+    {
+        var projectArg = new Argument<string>("project", "Project name.");
+        var command = new Command("validate", "Shortcut for 'project validate'.")
+        {
+            projectArg
+        };
+
+        command.SetHandler((string project, bool verbose) =>
+        {
+            var config = _configService.Load();
+            ValidateProjectConfig(config, project);
+        }, projectArg, verboseOption);
+
+        return command;
+    }
+
+    private Command BuildTemplatesRootCommand(Option<bool> verboseOption)
+    {
+        var command = new Command("templates", "List available module templates (shortcut for 'module available').");
+
+        command.SetHandler(async (bool verbose) =>
+        {
+            var config = _configService.Load();
+            using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
+            var modules = await client.GetAvailableModulesAsync();
+            Console.WriteLine(modules.ToString());
+        }, verboseOption);
+
+        return command;
     }
 
     private Command BuildProjectCreateCommand(Option<bool> verboseOption)
@@ -141,12 +323,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string name, string email, bool verbose) =>
         {
-            var config = _configService.Load();
-            using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-            var result = await client.CreateProjectAsync(name, email);
-            Console.WriteLine(result
-                ? $"✅ Project '{name}' created/request submitted. Check email for secret code."
-                : "⚠️ Project creation request failed.");
+            await HandleProjectCreateAsync(name, email, verbose);
         }, nameOption, emailOption, verboseOption);
 
         return command;
@@ -165,12 +342,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string name, string email, string secret, bool verbose) =>
         {
-            var config = _configService.Load();
-            using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-            var isValid = await client.CheckSecretCodeAsync(name, email, secret);
-            Console.WriteLine(isValid
-                ? "✅ Secret code is valid."
-                : "❌ Secret code is invalid.");
+            await HandleProjectVerifySecretAsync(name, email, secret, verbose);
         }, nameOption, emailOption, secretOption, verboseOption);
 
         return command;
@@ -200,12 +372,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string name, bool verbose) =>
         {
-            var config = _configService.Load();
-            using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-            var exists = await client.CheckProjectNameAsync(name);
-            Console.WriteLine(exists
-                ? $"✅ Project '{name}' exists."
-                : $"❌ Project '{name}' not found.");
+            await HandleProjectCheckAsync(name, verbose);
         }, nameOption, verboseOption);
 
         return command;
@@ -222,12 +389,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string name, string email, bool verbose) =>
         {
-            var config = _configService.Load();
-            using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-            var result = await client.ForgotSecretCodeAsync(name, email);
-            Console.WriteLine(result
-                ? "✅ Secret code reminder sent."
-                : "⚠️ Could not send secret code reminder.");
+            await HandleProjectForgotSecretAsync(name, email, verbose);
         }, nameOption, emailOption, verboseOption);
 
         return command;
@@ -235,7 +397,19 @@ public sealed class CliApplication
 
     private Command BuildModuleCommand(Option<bool> verboseOption)
     {
-        var command = new Command("module", "Manage project modules");
+        var command = new Command(
+            "module",
+            """
+            Manage project modules.
+            
+            Subcommands:
+              available     List available module templates.
+              list          List modules in a project.
+              add           Add module to project.
+              remove        Remove module from project.
+              get-dbml      Download a single module DBML.
+              save-dbml     Upload/save DBML content.
+            """);
 
         command.AddCommand(BuildModuleAvailableCommand(verboseOption));
         command.AddCommand(BuildModuleListCommand(verboseOption));
@@ -493,6 +667,298 @@ public sealed class CliApplication
         return command;
     }
 
+    private async Task HandleProjectCreateAsync(string projectName, string email, bool verbose)
+    {
+        var config = _configService.Load();
+        using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
+        var result = await client.CreateProjectAsync(projectName, email);
+        Console.WriteLine(result
+            ? $"✅ Project '{projectName}' created/request submitted. Check email for secret code."
+            : "⚠️ Project creation request failed.");
+    }
+
+    private async Task HandleProjectCheckAsync(string projectName, bool verbose)
+    {
+        var config = _configService.Load();
+        using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
+        var exists = await client.CheckProjectNameAsync(projectName);
+        Console.WriteLine(exists
+            ? $"✅ Project '{projectName}' exists."
+            : $"❌ Project '{projectName}' not found.");
+    }
+
+    private async Task HandleProjectForgotSecretAsync(string projectName, string email, bool verbose)
+    {
+        var config = _configService.Load();
+        using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
+        var result = await client.ForgotSecretCodeAsync(projectName, email);
+        Console.WriteLine(result
+            ? "✅ Secret code reminder sent."
+            : "⚠️ Could not send secret code reminder.");
+    }
+
+    private async Task HandleProjectVerifySecretAsync(string projectName, string email, string secret, bool verbose)
+    {
+        var config = _configService.Load();
+        using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
+        var isValid = await client.CheckSecretCodeAsync(projectName, email, secret);
+        Console.WriteLine(isValid
+            ? "✅ Secret code is valid."
+            : "❌ Secret code is invalid.");
+    }
+
+    private async Task HandleProjectDownloadDbmlsAsync(string projectName, string? email, string? secret, bool verbose)
+    {
+        var config = _configService.Load();
+        var (name, resolvedEmail, resolvedSecret) = _configService.ResolveProjectCredentials(config, projectName, email, secret);
+
+        var currentDir = Directory.GetCurrentDirectory();
+        var projectDir = Path.Combine(currentDir, projectName);
+        var templatesDir = Path.Combine(projectDir, "templates");
+
+        if (!Directory.Exists(projectDir))
+        {
+            Directory.CreateDirectory(projectDir);
+            Console.WriteLine($"📁 Created directory: {projectDir}");
+        }
+        else
+        {
+            Console.WriteLine($"📁 Using existing directory: {projectDir}");
+        }
+
+        if (!Directory.Exists(templatesDir))
+        {
+            Directory.CreateDirectory(templatesDir);
+            Console.WriteLine($"📁 Created templates directory: {templatesDir}");
+        }
+
+        using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
+
+        Console.WriteLine($"📦 Fetching modules for project '{name}'...");
+        var modules = await client.GetProjectModulesAsync(name);
+
+        if (modules.ValueKind != JsonValueKind.Array)
+        {
+            Console.WriteLine("❌ Failed to fetch modules or no modules found.");
+            return;
+        }
+
+        var moduleArray = modules.EnumerateArray().ToList();
+        if (moduleArray.Count == 0)
+        {
+            Console.WriteLine("⚠️ No modules found for this project.");
+            return;
+        }
+
+        Console.WriteLine($"📦 Found {moduleArray.Count} module(s). Downloading project DBMLs...");
+        Console.WriteLine(new string('-', 60));
+
+        var projectSuccessCount = 0;
+        var projectFailCount = 0;
+
+        foreach (var module in moduleArray)
+        {
+            var moduleName = module.TryGetProperty("moduleName", out var nameProp) ? nameProp.GetString() : null;
+            var templateKey = module.TryGetProperty("moduleTemplateKey", out var templateProp) ? templateProp.GetString() : null;
+
+            if (string.IsNullOrWhiteSpace(moduleName) || string.IsNullOrWhiteSpace(templateKey))
+            {
+                Console.WriteLine($"⚠️ Skipping module with missing name or template key.");
+                projectFailCount++;
+                continue;
+            }
+
+            try
+            {
+                Console.Write($"⬇️  Downloading {moduleName}... ");
+                var dbml = await client.GetModuleDbmlAsync(name, moduleName, templateKey, resolvedEmail, resolvedSecret);
+
+                var fileName = $"{moduleName}.dbml";
+                var projectFilePath = Path.Combine(projectDir, fileName);
+
+                await File.WriteAllTextAsync(projectFilePath, dbml);
+
+                Console.WriteLine($"✅ Saved to {fileName}");
+                projectSuccessCount++;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Failed: {ex.Message}");
+                projectFailCount++;
+            }
+        }
+
+        Console.WriteLine(new string('-', 60));
+        Console.WriteLine($"✅ Project modules: {projectSuccessCount} downloaded, {projectFailCount} failed.");
+
+        Console.WriteLine();
+        Console.WriteLine("📦 Fetching all template modules...");
+        var availableModules = await client.GetAvailableModulesAsync();
+
+        if (availableModules.ValueKind != JsonValueKind.Array)
+        {
+            Console.WriteLine("⚠️ Failed to fetch template modules.");
+        }
+        else
+        {
+            var templateArray = availableModules.EnumerateArray().ToList();
+            if (templateArray.Count > 0)
+            {
+                Console.WriteLine($"📦 Found {templateArray.Count} template module(s). Downloading to templates folder...");
+                Console.WriteLine(new string('-', 60));
+
+                var templateSuccessCount = 0;
+                var templateFailCount = 0;
+
+                foreach (var template in templateArray)
+                {
+                    var templateKey = template.TryGetProperty("key", out var keyProp) ? keyProp.GetString() : null;
+                    var templateName = template.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
+
+                    if (string.IsNullOrWhiteSpace(templateKey) || string.IsNullOrWhiteSpace(templateName))
+                    {
+                        Console.WriteLine($"⚠️ Skipping template with missing key or name.");
+                        templateFailCount++;
+                        continue;
+                    }
+
+                    try
+                    {
+                        Console.Write($"⬇️  Downloading template {templateName}... ");
+                        var dbml = await client.GetModuleDbmlAsync(name, templateName, templateKey, resolvedEmail, resolvedSecret);
+
+                        var fileName = $"{templateName}.dbml";
+                        var templatesFilePath = Path.Combine(templatesDir, fileName);
+
+                        await File.WriteAllTextAsync(templatesFilePath, dbml);
+
+                        Console.WriteLine($"✅ Saved to templates/{fileName}");
+                        templateSuccessCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"❌ Failed: {ex.Message}");
+                        templateFailCount++;
+                    }
+                }
+
+                Console.WriteLine(new string('-', 60));
+                Console.WriteLine($"✅ Template modules: {templateSuccessCount} downloaded, {templateFailCount} failed.");
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine(new string('=', 60));
+        Console.WriteLine($"📁 Project files saved to: {projectDir}");
+        Console.WriteLine($"📁 Template files saved to: {templatesDir}");
+    }
+
+    private async Task HandleProjectUpdateDbmlsAsync(string projectName, string? email, string? secret, bool verbose)
+    {
+        var config = _configService.Load();
+        var (name, resolvedEmail, resolvedSecret) = _configService.ResolveProjectCredentials(config, projectName, email, secret);
+
+        var currentDir = Directory.GetCurrentDirectory();
+        var projectDir = Path.Combine(currentDir, projectName);
+
+        if (!Directory.Exists(projectDir))
+        {
+            Console.WriteLine($"❌ Project directory not found: {projectDir}");
+            Console.WriteLine($"   Run 'quickcode get-dbmls {projectName}' first to download DBMLs.");
+            return;
+        }
+
+        var dbmlFiles = Directory.GetFiles(projectDir, "*.dbml", SearchOption.TopDirectoryOnly);
+
+        if (dbmlFiles.Length == 0)
+        {
+            Console.WriteLine($"⚠️ No DBML files found in {projectDir}");
+            return;
+        }
+
+        using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
+
+        Console.WriteLine($"📦 Fetching module information for project '{name}'...");
+        var modules = await client.GetProjectModulesAsync(name);
+
+        if (modules.ValueKind != JsonValueKind.Array)
+        {
+            Console.WriteLine("❌ Failed to fetch modules or no modules found.");
+            return;
+        }
+
+        var moduleArray = modules.EnumerateArray().ToList();
+        var moduleMap = new Dictionary<string, JsonElement>();
+        foreach (var module in moduleArray)
+        {
+            var moduleName = module.TryGetProperty("moduleName", out var nameProp) ? nameProp.GetString() : null;
+            if (!string.IsNullOrWhiteSpace(moduleName))
+            {
+                moduleMap[moduleName] = module;
+            }
+        }
+
+        Console.WriteLine($"📦 Found {dbmlFiles.Length} DBML file(s). Uploading to API...");
+        Console.WriteLine(new string('-', 60));
+
+        var successCount = 0;
+        var failCount = 0;
+
+        foreach (var dbmlFile in dbmlFiles)
+        {
+            var fileName = Path.GetFileNameWithoutExtension(dbmlFile);
+
+            if (!moduleMap.TryGetValue(fileName, out var module))
+            {
+                Console.WriteLine($"⚠️ Skipping {Path.GetFileName(dbmlFile)}: Module '{fileName}' not found in project.");
+                failCount++;
+                continue;
+            }
+
+            var moduleName = module.TryGetProperty("moduleName", out var nameProp) ? nameProp.GetString() : null;
+            var templateKey = module.TryGetProperty("moduleTemplateKey", out var templateProp) ? templateProp.GetString() : null;
+            var dbTypeKey = module.TryGetProperty("dbTypeKey", out var dbTypeProp) ? dbTypeProp.GetString() : null;
+
+            if (string.IsNullOrWhiteSpace(moduleName) || string.IsNullOrWhiteSpace(templateKey) || string.IsNullOrWhiteSpace(dbTypeKey))
+            {
+                Console.WriteLine($"⚠️ Skipping {Path.GetFileName(dbmlFile)}: Missing module information.");
+                failCount++;
+                continue;
+            }
+
+            try
+            {
+                Console.Write($"⬆️  Uploading {Path.GetFileName(dbmlFile)}... ");
+                var dbmlContent = await File.ReadAllTextAsync(dbmlFile);
+
+                var result = await client.SaveModuleDbmlAsync(name, resolvedEmail, resolvedSecret, moduleName, templateKey, dbmlContent, dbTypeKey);
+
+                if (result)
+                {
+                    Console.WriteLine("✅ Uploaded successfully");
+                    successCount++;
+                }
+                else
+                {
+                    Console.WriteLine("❌ API returned failure");
+                    failCount++;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Failed: {ex.Message}");
+                failCount++;
+            }
+        }
+
+        Console.WriteLine(new string('-', 60));
+        Console.WriteLine($"✅ Successfully uploaded {successCount} DBML file(s).");
+        if (failCount > 0)
+        {
+            Console.WriteLine($"⚠️  Failed to upload {failCount} file(s).");
+        }
+    }
+
     private void ApplySet(QuickCodeConfig config, string? project, string key, string value)
     {
         key = key.Trim();
@@ -729,156 +1195,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string projectName, string? email, string? secret, bool verbose) =>
         {
-            var config = _configService.Load();
-            var (name, resolvedEmail, resolvedSecret) = _configService.ResolveProjectCredentials(config, projectName, email, secret);
-
-            // Get current directory
-            var currentDir = Directory.GetCurrentDirectory();
-            var projectDir = Path.Combine(currentDir, projectName);
-            var templatesDir = Path.Combine(projectDir, "templates");
-
-            // Create project directory if it doesn't exist
-            if (!Directory.Exists(projectDir))
-            {
-                Directory.CreateDirectory(projectDir);
-                Console.WriteLine($"📁 Created directory: {projectDir}");
-            }
-            else
-            {
-                Console.WriteLine($"📁 Using existing directory: {projectDir}");
-            }
-
-            // Create templates directory if it doesn't exist
-            if (!Directory.Exists(templatesDir))
-            {
-                Directory.CreateDirectory(templatesDir);
-                Console.WriteLine($"📁 Created templates directory: {templatesDir}");
-            }
-
-            using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-            
-            // Get all modules for the project
-            Console.WriteLine($"📦 Fetching modules for project '{name}'...");
-            var modules = await client.GetProjectModulesAsync(name);
-
-            if (modules.ValueKind != JsonValueKind.Array)
-            {
-                Console.WriteLine("❌ Failed to fetch modules or no modules found.");
-                return;
-            }
-
-            var moduleArray = modules.EnumerateArray().ToList();
-            if (moduleArray.Count == 0)
-            {
-                Console.WriteLine("⚠️ No modules found for this project.");
-                return;
-            }
-
-            Console.WriteLine($"📦 Found {moduleArray.Count} module(s). Downloading project DBMLs...");
-            Console.WriteLine(new string('-', 60));
-
-            var projectSuccessCount = 0;
-            var projectFailCount = 0;
-
-            // Download project modules to project directory
-            foreach (var module in moduleArray)
-            {
-                var moduleName = module.TryGetProperty("moduleName", out var nameProp) ? nameProp.GetString() : null;
-                var templateKey = module.TryGetProperty("moduleTemplateKey", out var templateProp) ? templateProp.GetString() : null;
-
-                if (string.IsNullOrWhiteSpace(moduleName) || string.IsNullOrWhiteSpace(templateKey))
-                {
-                    Console.WriteLine($"⚠️ Skipping module with missing name or template key.");
-                    projectFailCount++;
-                    continue;
-                }
-
-                try
-                {
-                    Console.Write($"⬇️  Downloading {moduleName}... ");
-                    var dbml = await client.GetModuleDbmlAsync(name, moduleName, templateKey, resolvedEmail, resolvedSecret);
-                    
-                    var fileName = $"{moduleName}.dbml";
-                    var projectFilePath = Path.Combine(projectDir, fileName);
-                    
-                    // Save to project directory
-                    await File.WriteAllTextAsync(projectFilePath, dbml);
-                    
-                    Console.WriteLine($"✅ Saved to {fileName}");
-                    projectSuccessCount++;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"❌ Failed: {ex.Message}");
-                    projectFailCount++;
-                }
-            }
-
-            Console.WriteLine(new string('-', 60));
-            Console.WriteLine($"✅ Project modules: {projectSuccessCount} downloaded, {projectFailCount} failed.");
-
-            // Download all template modules to templates directory
-            Console.WriteLine();
-            Console.WriteLine($"📦 Fetching all template modules...");
-            var availableModules = await client.GetAvailableModulesAsync();
-
-            if (availableModules.ValueKind != JsonValueKind.Array)
-            {
-                Console.WriteLine("⚠️ Failed to fetch template modules.");
-            }
-            else
-            {
-                var templateArray = availableModules.EnumerateArray().ToList();
-                if (templateArray.Count > 0)
-                {
-                    Console.WriteLine($"📦 Found {templateArray.Count} template module(s). Downloading to templates folder...");
-                    Console.WriteLine(new string('-', 60));
-
-                    var templateSuccessCount = 0;
-                    var templateFailCount = 0;
-
-                    foreach (var template in templateArray)
-                    {
-                        var templateKey = template.TryGetProperty("key", out var keyProp) ? keyProp.GetString() : null;
-                        var templateName = template.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
-
-                        if (string.IsNullOrWhiteSpace(templateKey) || string.IsNullOrWhiteSpace(templateName))
-                        {
-                            Console.WriteLine($"⚠️ Skipping template with missing key or name.");
-                            templateFailCount++;
-                            continue;
-                        }
-
-                        try
-                        {
-                            Console.Write($"⬇️  Downloading template {templateName}... ");
-                            var dbml = await client.GetModuleDbmlAsync(name, templateName, templateKey, resolvedEmail, resolvedSecret);
-                            
-                            var fileName = $"{templateName}.dbml";
-                            var templatesFilePath = Path.Combine(templatesDir, fileName);
-                            
-                            // Save to templates directory
-                            await File.WriteAllTextAsync(templatesFilePath, dbml);
-                            
-                            Console.WriteLine($"✅ Saved to templates/{fileName}");
-                            templateSuccessCount++;
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"❌ Failed: {ex.Message}");
-                            templateFailCount++;
-                        }
-                    }
-
-                    Console.WriteLine(new string('-', 60));
-                    Console.WriteLine($"✅ Template modules: {templateSuccessCount} downloaded, {templateFailCount} failed.");
-                }
-            }
-
-            Console.WriteLine();
-            Console.WriteLine(new string('=', 60));
-            Console.WriteLine($"📁 Project files saved to: {projectDir}");
-            Console.WriteLine($"📁 Template files saved to: {templatesDir}");
+            await HandleProjectDownloadDbmlsAsync(projectName, email, secret, verbose);
         }, nameOption, emailOption, secretOption, verboseOption);
 
         return command;
@@ -897,111 +1214,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string projectName, string? email, string? secret, bool verbose) =>
         {
-            var config = _configService.Load();
-            var (name, resolvedEmail, resolvedSecret) = _configService.ResolveProjectCredentials(config, projectName, email, secret);
-
-            // Get current directory
-            var currentDir = Directory.GetCurrentDirectory();
-            var projectDir = Path.Combine(currentDir, projectName);
-
-            if (!Directory.Exists(projectDir))
-            {
-                Console.WriteLine($"❌ Project directory not found: {projectDir}");
-                Console.WriteLine($"   Run 'quickcode project get-dbmls --name {projectName}' first to download DBMLs.");
-                return;
-            }
-
-            // Get all .dbml files in project directory (excluding templates subdirectory)
-            var dbmlFiles = Directory.GetFiles(projectDir, "*.dbml", SearchOption.TopDirectoryOnly);
-            
-            if (dbmlFiles.Length == 0)
-            {
-                Console.WriteLine($"⚠️ No DBML files found in {projectDir}");
-                return;
-            }
-
-            using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-            
-            // Get all modules for the project to match files with module info
-            Console.WriteLine($"📦 Fetching module information for project '{name}'...");
-            var modules = await client.GetProjectModulesAsync(name);
-
-            if (modules.ValueKind != JsonValueKind.Array)
-            {
-                Console.WriteLine("❌ Failed to fetch modules or no modules found.");
-                return;
-            }
-
-            var moduleArray = modules.EnumerateArray().ToList();
-            var moduleMap = new Dictionary<string, JsonElement>();
-            foreach (var module in moduleArray)
-            {
-                var moduleName = module.TryGetProperty("moduleName", out var nameProp) ? nameProp.GetString() : null;
-                if (!string.IsNullOrWhiteSpace(moduleName))
-                {
-                    moduleMap[moduleName] = module;
-                }
-            }
-
-            Console.WriteLine($"📦 Found {dbmlFiles.Length} DBML file(s). Uploading to API...");
-            Console.WriteLine(new string('-', 60));
-
-            var successCount = 0;
-            var failCount = 0;
-
-            foreach (var dbmlFile in dbmlFiles)
-            {
-                var fileName = Path.GetFileNameWithoutExtension(dbmlFile);
-                
-                if (!moduleMap.TryGetValue(fileName, out var module))
-                {
-                    Console.WriteLine($"⚠️ Skipping {Path.GetFileName(dbmlFile)}: Module '{fileName}' not found in project.");
-                    failCount++;
-                    continue;
-                }
-
-                var moduleName = module.TryGetProperty("moduleName", out var nameProp) ? nameProp.GetString() : null;
-                var templateKey = module.TryGetProperty("moduleTemplateKey", out var templateProp) ? templateProp.GetString() : null;
-                var dbTypeKey = module.TryGetProperty("dbTypeKey", out var dbTypeProp) ? dbTypeProp.GetString() : null;
-
-                if (string.IsNullOrWhiteSpace(moduleName) || string.IsNullOrWhiteSpace(templateKey) || string.IsNullOrWhiteSpace(dbTypeKey))
-                {
-                    Console.WriteLine($"⚠️ Skipping {Path.GetFileName(dbmlFile)}: Missing module information.");
-                    failCount++;
-                    continue;
-                }
-
-                try
-                {
-                    Console.Write($"⬆️  Uploading {Path.GetFileName(dbmlFile)}... ");
-                    var dbmlContent = await File.ReadAllTextAsync(dbmlFile);
-                    
-                    var result = await client.SaveModuleDbmlAsync(name, resolvedEmail, resolvedSecret, moduleName, templateKey, dbmlContent, dbTypeKey);
-                    
-                    if (result)
-                    {
-                        Console.WriteLine($"✅ Uploaded successfully");
-                        successCount++;
-                    }
-                    else
-                    {
-                        Console.WriteLine($"❌ API returned failure");
-                        failCount++;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"❌ Failed: {ex.Message}");
-                    failCount++;
-                }
-            }
-
-            Console.WriteLine(new string('-', 60));
-            Console.WriteLine($"✅ Successfully uploaded {successCount} DBML file(s).");
-            if (failCount > 0)
-            {
-                Console.WriteLine($"⚠️  Failed to upload {failCount} file(s).");
-            }
+            await HandleProjectUpdateDbmlsAsync(projectName, email, secret, verbose);
         }, nameOption, emailOption, secretOption, verboseOption);
 
         return command;
