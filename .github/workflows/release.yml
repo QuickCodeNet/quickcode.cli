@@ -55,21 +55,7 @@ jobs:
           elif [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             VERSION="${GITHUB_REF#refs/tags/v}"
           elif [[ "${GITHUB_EVENT_NAME}" = "push" && "${GITHUB_REF}" == refs/heads/* ]]; then
-            VERSION=$(python3 <<'PY'
-import sys
-import xml.etree.ElementTree as ET
-
-tree = ET.parse('Directory.Build.props')
-root = tree.getroot()
-version = root.find('.//Version')
-text = (version.text or '').strip() if version is not None else ''
-
-if not text:
-    raise SystemExit("❌ Error: <Version> not found in Directory.Build.props")
-
-print(text)
-PY
-)
+            VERSION=$(python3 -c "import xml.etree.ElementTree as ET; tree = ET.parse('Directory.Build.props'); root = tree.getroot(); version = root.find('.//Version'); text = (version.text or '').strip() if version is not None else ''; assert text, '❌ Error: <Version> not found in Directory.Build.props'; print(text)")
           else
             echo "❌ Error: Version cannot be determined. Use workflow_dispatch with version input or push a tag."
             exit 1
@@ -215,21 +201,7 @@ PY
           elif [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             VERSION="${GITHUB_REF#refs/tags/v}"
           elif [[ "${GITHUB_EVENT_NAME}" = "push" && "${GITHUB_REF}" == refs/heads/* ]]; then
-            VERSION=$(python3 <<'PY'
-import sys
-import xml.etree.ElementTree as ET
-
-tree = ET.parse('Directory.Build.props')
-root = tree.getroot()
-version = root.find('.//Version')
-text = (version.text or '').strip() if version is not None else ''
-
-if not text:
-    raise SystemExit("❌ Error: <Version> not found in Directory.Build.props")
-
-print(text)
-PY
-)
+            VERSION=$(python3 -c "import xml.etree.ElementTree as ET; tree = ET.parse('Directory.Build.props'); root = tree.getroot(); version = root.find('.//Version'); text = (version.text or '').strip() if version is not None else ''; assert text, '❌ Error: <Version> not found in Directory.Build.props'; print(text)")
           else
             echo "❌ Error: Version cannot be determined. Use workflow_dispatch with version input or push a tag."
             exit 1
