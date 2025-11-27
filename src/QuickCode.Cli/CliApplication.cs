@@ -1,6 +1,7 @@
 #nullable enable
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
 using QuickCode.Cli.Configuration;
@@ -12,6 +13,7 @@ namespace QuickCode.Cli;
 
 public sealed class CliApplication
 {
+    private static readonly Uri ProjectReadmeUri = new("https://raw.githubusercontent.com/QuickCodeNet/quickcode.cli/main/README.md");
     private readonly ConfigService _configService = new();
 
     public Task<int> RunAsync(string[] args)
@@ -793,6 +795,8 @@ public sealed class CliApplication
             Console.WriteLine($"📁 Created templates directory: {templatesDir}");
         }
 
+        await DownloadProjectReadmeAsync(projectDir);
+
         using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
 
         Console.WriteLine($"📦 Fetching modules for project '{name}'...");
@@ -912,6 +916,22 @@ public sealed class CliApplication
         Console.WriteLine(new string('=', 60));
         Console.WriteLine($"📁 Project files saved to: {projectDir}");
         Console.WriteLine($"📁 Template files saved to: {templatesDir}");
+    }
+
+    private static async Task DownloadProjectReadmeAsync(string projectDir)
+    {
+        var readmePath = Path.Combine(projectDir, "README.md");
+        try
+        {
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+            var readmeContent = await httpClient.GetStringAsync(ProjectReadmeUri);
+            await File.WriteAllTextAsync(readmePath, readmeContent);
+            Console.WriteLine($"📄 Saved README.md to {readmePath}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Could not download README.md: {ex.Message}");
+        }
     }
 
     private async Task HandleProjectUpdateDbmlsAsync(string projectName, string? email, string? secret, bool verbose)

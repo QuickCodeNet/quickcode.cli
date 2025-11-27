@@ -87,6 +87,8 @@ quickcode demo update-dbmls
 quickcode demo validate
 quickcode demo remove
 
+Running `quickcode demo get-dbmls` also places the latest `README.md` in the same folder so the command reference is always available offline.
+
 
 # 4. Module listing / editing (examples)
 quickcode demo modules
@@ -154,7 +156,7 @@ dotnet run --project src/QuickCode.Cli -- demo generate --watch
 | `project forgot-secret` | Send secret reminder mail | `quickcode project forgot-secret --name demo --email demo@quickcode.net` |
 | `project verify-secret` | Validate email + secret combination | `quickcode project verify-secret --name demo --email demo@quickcode.net --secret-code SECRET123` |
 | `project validate --name <project>` | Validate specific project configuration | `quickcode project validate --name demo` |
-| `project get-dbmls --name <project>` | Download project modules to project folder and all template modules to templates subfolder | `quickcode project get-dbmls --name demo` |
+| `project get-dbmls --name <project>` | Download project modules, README.md, and templates to the project folder | `quickcode project get-dbmls --name demo` |
 | `project update-dbmls --name <project>` | Upload all DBML files from project folder to API | `quickcode project update-dbmls --name demo` |
 | `project remove --name <project>` | Remove stored credentials and delete local DBML folder | `quickcode project remove --name demo` |
 | `module available` | List available templates | `quickcode module available` |

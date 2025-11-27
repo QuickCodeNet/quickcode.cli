@@ -87,6 +87,8 @@ quickcode demo update-dbmls
 quickcode demo validate
 quickcode demo remove
 
+`quickcode demo get-dbmls` komutu aynı klasöre güncel `README.md` dosyasını da indirir; böylece dokümana çevrimdışı erişebilirsin.
+
 # 4. Modül örnekleri
 quickcode demo modules
 quickcode templates
@@ -153,7 +155,7 @@ dotnet run --project src/QuickCode.Cli -- demo generate --watch
 | `project forgot-secret` | Secret kod maili gönder | `quickcode project forgot-secret --name demo --email demo@quickcode.net` |
 | `project verify-secret` | Email + secret doğrula | `quickcode project verify-secret --name demo --email demo@quickcode.net --secret-code SECRET123` |
 | `project validate --name <proje>` | Belirli bir proje konfigürasyonunu doğrula | `quickcode project validate --name demo` |
-| `project get-dbmls --name <proje>` | Proje modüllerini proje klasörüne, tüm template modüllerini templates alt klasörüne indir | `quickcode project get-dbmls --name demo` |
+| `project get-dbmls --name <proje>` | Proje modüllerini, README.md dosyasını ve template modüllerini ilgili klasörlere indir | `quickcode project get-dbmls --name demo` |
 | `project update-dbmls --name <proje>` | Proje klasöründeki tüm DBML dosyalarını API'ye yükle | `quickcode project update-dbmls --name demo` |
 | `module available/list/...` | Modül yönetimi | `quickcode module list --project demo` |
 | `generate [--watch]` | Generate başlat ve istersen izle | `quickcode generate demo --watch` |
