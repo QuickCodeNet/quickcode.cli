@@ -56,13 +56,13 @@ jobs:
             VERSION="${GITHUB_REF#refs/tags/v}"
           elif [[ "${GITHUB_EVENT_NAME}" = "push" && "${GITHUB_REF}" == refs/heads/* ]]; then
             VERSION=$(python3 - <<'PY'
-          import xml.etree.ElementTree as ET
-          tree = ET.parse('Directory.Build.props')
-          root = tree.getroot()
-          version = root.find('.//Version')
-          if version is None or not (version.text or '').strip():
-              raise SystemExit("❌ Error: <Version> not found in Directory.Build.props")
-          print(version.text.strip())
+              import xml.etree.ElementTree as ET
+              tree = ET.parse('Directory.Build.props')
+              root = tree.getroot()
+              version = root.find('.//Version')
+              if version is None or not (version.text or '').strip():
+                  raise SystemExit("❌ Error: <Version> not found in Directory.Build.props")
+              print(version.text.strip())
 PY
 )
           else
