@@ -85,6 +85,7 @@ quickcode demo verify-secret [--email demo@quickcode.net --secret-code SECRET123
 quickcode demo get-dbmls
 quickcode demo update-dbmls
 quickcode demo validate
+quickcode demo remove
 
 # 4. Modül örnekleri
 quickcode demo modules

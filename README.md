@@ -85,6 +85,8 @@ quickcode demo verify-secret [--email demo@quickcode.net --secret-code SECRET123
 quickcode demo get-dbmls
 quickcode demo update-dbmls
 quickcode demo validate
+quickcode demo remove
+
 
 # 4. Module listing / editing (examples)
 quickcode demo modules
@@ -154,6 +156,7 @@ dotnet run --project src/QuickCode.Cli -- demo generate --watch
 | `project validate --name <project>` | Validate specific project configuration | `quickcode project validate --name demo` |
 | `project get-dbmls --name <project>` | Download project modules to project folder and all template modules to templates subfolder | `quickcode project get-dbmls --name demo` |
 | `project update-dbmls --name <project>` | Upload all DBML files from project folder to API | `quickcode project update-dbmls --name demo` |
+| `project remove --name <project>` | Remove stored credentials and delete local DBML folder | `quickcode project remove --name demo` |
 | `module available` | List available templates | `quickcode module available` |
 | `module list/add/remove/get-dbml/save-dbml` | Manage project modules | `quickcode module list --project demo` |
 | `generate [--watch]` | Trigger generation and optionally stream progress | `quickcode generate demo --watch` |

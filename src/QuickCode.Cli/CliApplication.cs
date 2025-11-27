@@ -36,6 +36,7 @@ public sealed class CliApplication
         root.AddCommand(BuildGetDbmlsRootCommand(verboseOption));
         root.AddCommand(BuildUpdateDbmlsRootCommand(verboseOption));
         root.AddCommand(BuildValidateRootCommand(verboseOption));
+        root.AddCommand(BuildRemoveRootCommand(verboseOption));
         root.AddCommand(BuildTemplatesRootCommand(verboseOption));
         root.AddCommand(BuildGenerateCommand(verboseOption));
         root.AddCommand(BuildStatusCommand(verboseOption));
@@ -148,6 +149,7 @@ public sealed class CliApplication
               verify-secret   Verify email + secret combination.
               get-dbmls       Download project & template DBML files.
               update-dbmls    Upload DBML files back to the API.
+              remove          Remove stored credentials and DBML folder.
               validate        Validate stored project credentials.
             """);
 
@@ -158,8 +160,24 @@ public sealed class CliApplication
         project.AddCommand(BuildProjectValidateCommand(verboseOption));
         project.AddCommand(BuildProjectDownloadDbmlsCommand(verboseOption));
         project.AddCommand(BuildProjectUpdateDbmlsCommand(verboseOption));
+        project.AddCommand(BuildProjectRemoveCommand(verboseOption));
 
         return project;
+    }
+
+    private Command BuildProjectRemoveCommand(Option<bool> verboseOption)
+    {
+        var command = new Command("remove", "Remove stored project credentials and local DBML folder");
+        var nameOption = new Option<string>("--name") { IsRequired = true };
+
+        command.AddOption(nameOption);
+
+        command.SetHandler((string name, bool verbose) =>
+        {
+            HandleProjectRemove(name);
+        }, nameOption, verboseOption);
+
+        return command;
     }
 
     private Command BuildCreateRootCommand(Option<bool> verboseOption)
@@ -292,6 +310,22 @@ public sealed class CliApplication
         {
             var config = _configService.Load();
             ValidateProjectConfig(config, project);
+        }, projectArg, verboseOption);
+
+        return command;
+    }
+
+    private Command BuildRemoveRootCommand(Option<bool> verboseOption)
+    {
+        var projectArg = new Argument<string>("project", "Project name.");
+        var command = new Command("remove", "Remove stored project credentials and local DBML folder.")
+        {
+            projectArg
+        };
+
+        command.SetHandler((string project, bool verbose) =>
+        {
+            HandleProjectRemove(project);
         }, projectArg, verboseOption);
 
         return command;
@@ -737,7 +771,10 @@ public sealed class CliApplication
         var (name, resolvedEmail, resolvedSecret) = _configService.ResolveProjectCredentials(config, projectName, email, secret);
 
         var currentDir = Directory.GetCurrentDirectory();
-        var projectDir = Path.Combine(currentDir, projectName);
+        var currentDirName = new DirectoryInfo(currentDir).Name;
+        var projectDir = string.Equals(currentDirName, projectName, StringComparison.OrdinalIgnoreCase)
+            ? currentDir
+            : Path.Combine(currentDir, projectName);
         var templatesDir = Path.Combine(projectDir, "templates");
 
         if (!Directory.Exists(projectDir))
@@ -883,7 +920,10 @@ public sealed class CliApplication
         var (name, resolvedEmail, resolvedSecret) = _configService.ResolveProjectCredentials(config, projectName, email, secret);
 
         var currentDir = Directory.GetCurrentDirectory();
-        var projectDir = Path.Combine(currentDir, projectName);
+        var currentDirName = new DirectoryInfo(currentDir).Name;
+        var projectDir = string.Equals(currentDirName, projectName, StringComparison.OrdinalIgnoreCase)
+            ? currentDir
+            : Path.Combine(currentDir, projectName);
 
         if (!Directory.Exists(projectDir))
         {
@@ -980,6 +1020,43 @@ public sealed class CliApplication
         if (failCount > 0)
         {
             Console.WriteLine($"⚠️  Failed to upload {failCount} file(s).");
+        }
+    }
+
+    private void HandleProjectRemove(string projectName)
+    {
+        var config = _configService.Load();
+        if (!config.Projects.Remove(projectName))
+        {
+            Console.WriteLine($"⚠️ Project '{projectName}' not found in config.");
+        }
+        else
+        {
+            _configService.Save(config);
+            Console.WriteLine($"🗑️ Removed stored credentials for project '{projectName}'.");
+        }
+
+        var currentDir = Directory.GetCurrentDirectory();
+        var currentDirName = new DirectoryInfo(currentDir).Name;
+        var projectDir = string.Equals(currentDirName, projectName, StringComparison.OrdinalIgnoreCase)
+            ? currentDir
+            : Path.Combine(currentDir, projectName);
+
+        if (Directory.Exists(projectDir))
+        {
+            try
+            {
+                Directory.Delete(projectDir, recursive: true);
+                Console.WriteLine($"🧹 Deleted DBML folder: {projectDir}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ Could not delete folder '{projectDir}': {ex.Message}");
+            }
+        }
+        else
+        {
+            Console.WriteLine($"ℹ️ No local DBML folder found at {projectDir}");
         }
     }
 
