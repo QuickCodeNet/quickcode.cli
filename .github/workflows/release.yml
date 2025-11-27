@@ -4,6 +4,10 @@ on:
   push:
     tags:
       - 'v*.*.*'
+    branches:
+      - main
+    paths:
+      - Directory.Build.props
   workflow_dispatch:
     inputs:
       version:
@@ -50,6 +54,17 @@ jobs:
             VERSION="${{ github.event.inputs.version }}"
           elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             VERSION="${GITHUB_REF#refs/tags/v}"
+          elif [[ "${{ github.event_name }}" = "push" && "${{ github.ref }}" == refs/heads/* ]]; then
+            VERSION=$(python3 - <<'PY'
+import xml.etree.ElementTree as ET
+tree = ET.parse('Directory.Build.props')
+root = tree.getroot()
+version = root.find('.//Version')
+if version is None or not (version.text or '').strip():
+    raise SystemExit("❌ Error: <Version> not found in Directory.Build.props")
+print(version.text.strip())
+PY
+)
           else
             echo "❌ Error: Version cannot be determined. Use workflow_dispatch with version input or push a tag."
             exit 1
@@ -194,6 +209,17 @@ jobs:
             VERSION="${{ github.event.inputs.version }}"
           elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             VERSION="${GITHUB_REF#refs/tags/v}"
+          elif [[ "${{ github.event_name }}" = "push" && "${{ github.ref }}" == refs/heads/* ]]; then
+            VERSION=$(python3 - <<'PY'
+import xml.etree.ElementTree as ET
+tree = ET.parse('Directory.Build.props')
+root = tree.getroot()
+version = root.find('.//Version')
+if version is None or not (version.text or '').strip():
+    raise SystemExit("❌ Error: <Version> not found in Directory.Build.props")
+print(version.text.strip())
+PY
+)
           else
             echo "❌ Error: Version cannot be determined. Use workflow_dispatch with version input or push a tag."
             exit 1
@@ -201,8 +227,8 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "✅ Version determined: ${VERSION}"
 
-      - name: Create Tag (if workflow_dispatch)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Create Tag (if workflow_dispatch or branch push)
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/'))
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -381,8 +407,8 @@ jobs:
           
           echo "✅ Homebrew Tap updated automatically!"
 
-      - name: Create Tag (if workflow_dispatch)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Create Tag (if workflow_dispatch or branch push)
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/'))
         shell: bash
         run: |
           VERSION="${{ steps.version.outputs.version }}"
