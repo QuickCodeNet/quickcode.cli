@@ -22,6 +22,7 @@
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
     <PackageReference Include="System.CommandLine" />
+    <PackageReference Include="System.Text.Json" />
   </ItemGroup>
 
 </Project>
