@@ -69,56 +69,48 @@ public static class CliHelpers
                 // Initialize progress area position on first render
                 if (!ProgressTop.HasValue)
                 {
-                    var currentTop = Console.CursorTop;
-                    // On Mac, sometimes CursorTop can be 0 or negative, so we ensure it's valid
-                    if (currentTop < 0)
-                    {
-                        currentTop = 0;
-                    }
-                    ProgressTop = currentTop;
+                    ProgressTop = Console.CursorTop;
                 }
 
                 var startRow = ProgressTop.Value;
                 var bufferWidth = SafeBufferWidth();
-                var bufferHeight = SafeBufferHeight();
 
-                // Validate startRow is within buffer bounds
-                if (startRow < 0 || startRow >= bufferHeight)
+                // On Mac, use ANSI escape codes to move cursor up to the progress area
+                // Calculate how many lines we need to move up
+                var currentCursorTop = Console.CursorTop;
+                var linesToMoveUp = currentCursorTop - startRow;
+
+                // If we're not at the start position, move cursor up
+                if (linesToMoveUp > 0)
                 {
-                    // Reset if invalid
-                    ProgressTop = Console.CursorTop;
-                    startRow = ProgressTop.Value;
+                    // Move cursor up using ANSI escape code
+                    Console.Write($"\x1b[{linesToMoveUp}A");
+                }
+                else if (linesToMoveUp < 0)
+                {
+                    // If we're above the start position, move down
+                    Console.Write($"\x1b[{-linesToMoveUp}B");
                 }
 
-                // Render each line at the correct position
+                // Now render each line
                 for (var i = 0; i < lines.Count; i++)
                 {
-                    var currentRow = startRow + i;
-                    
-                    // Skip if row is out of bounds
-                    if (currentRow < 0 || currentRow >= bufferHeight)
+                    // Move to beginning of line
+                    Console.Write("\r");
+                    // Clear the entire line
+                    Console.Write("\x1b[K");
+                    // Write the line content (truncate if too long)
+                    var line = lines[i];
+                    if (line.Length > bufferWidth)
                     {
-                        continue;
+                        line = line.Substring(0, bufferWidth);
                     }
+                    Console.Write(line);
                     
-                    try
+                    // If not last line, move to next line
+                    if (i < lines.Count - 1)
                     {
-                        Console.SetCursorPosition(0, currentRow);
-                        // Clear the entire line
-                        Console.Write("\x1b[K");
-                        // Write the line content (truncate if too long)
-                        var line = lines[i];
-                        if (line.Length > bufferWidth)
-                        {
-                            line = line.Substring(0, bufferWidth);
-                        }
-                        Console.Write(line);
-                    }
-                    catch
-                    {
-                        // If we can't set cursor position, try fallback
-                        // Write the line normally (this will cause scrolling but at least it's visible)
-                        Console.WriteLine(lines[i]);
+                        Console.Write("\n");
                     }
                 }
 
@@ -127,22 +119,10 @@ public static class CliHelpers
                 {
                     for (var i = lines.Count; i < ProgressHeight; i++)
                     {
-                        var currentRow = startRow + i;
-                        
-                        if (currentRow < 0 || currentRow >= bufferHeight)
+                        Console.Write("\r\x1b[K");
+                        if (i < ProgressHeight - 1)
                         {
-                            continue;
-                        }
-                        
-                        try
-                        {
-                            Console.SetCursorPosition(0, currentRow);
-                            Console.Write("\x1b[K");
-                        }
-                        catch
-                        {
-                            // Skip if we can't set cursor position
-                            continue;
+                            Console.Write("\n");
                         }
                     }
                 }
@@ -150,40 +130,28 @@ public static class CliHelpers
                 // Update height
                 ProgressHeight = lines.Count;
                 
-                // Move cursor to position after progress area (but don't print anything)
-                // This ensures other console writes appear below the progress area
-                try
-                {
-                    var newCursorTop = startRow + ProgressHeight;
-                    if (newCursorTop >= 0 && newCursorTop < bufferHeight)
-                    {
-                        Console.SetCursorPosition(0, newCursorTop);
-                    }
-                }
-                catch
-                {
-                    // If we can't move cursor, that's okay
-                }
+                // Move cursor to position after progress area
+                // We're already at the last line of progress area, so we're good
             }
             catch
             {
                 // Fallback: if cursor positioning fails, use simple approach
                 try
                 {
+                    // Try to move cursor to start position using ANSI codes
                     if (ProgressTop.HasValue)
                     {
-                        try
+                        var currentTop = Console.CursorTop;
+                        var diff = currentTop - ProgressTop.Value;
+                        if (diff > 0)
                         {
-                            Console.SetCursorPosition(0, ProgressTop.Value);
-                        }
-                        catch
-                        {
-                            // Can't set cursor, just write normally
+                            Console.Write($"\x1b[{diff}A");
                         }
                     }
 
                     foreach (var line in lines)
                     {
+                        Console.Write("\r\x1b[K");
                         Console.WriteLine(line);
                     }
 
