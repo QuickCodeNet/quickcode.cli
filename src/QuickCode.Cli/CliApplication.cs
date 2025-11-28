@@ -1377,14 +1377,12 @@ public sealed class CliApplication
                     {
                         await Task.Delay(TimeSpan.FromSeconds(5), verifyCts.Token);
                         verifyCts.Token.ThrowIfCancellationRequested();
-
-                        Console.WriteLine("ℹ️ No SignalR updates for 5s, verifying status via HTTP...");
+                        
                         var status = await client.GetActiveProjectAsync(sessionId);
                         if (status is not null)
                         {
                             RenderPollingStatus(status);
                             
-                            // If Run ID is -1, the generation session is invalid - exit
                             if (status.ActiveRunId == -1)
                             {
                                 CliHelpers.ResetProgressArea();
@@ -1393,19 +1391,17 @@ public sealed class CliApplication
                                 return;
                             }
                             
-                            // Check if all actions are completed
                             try
                             {
                                 var stepsData = await client.GetGenerationStepsAsync();
                                 if (stepsData.ValueKind == JsonValueKind.Object)
                                 {
-                                    // Try to extract allActions from the response
                                     if (stepsData.TryGetProperty("allActions", out var allActions) ||
                                         stepsData.TryGetProperty("actions", out allActions))
                                     {
                                         if (CliHelpers.AreAllActionsCompleted(allActions))
                                         {
-                                CliHelpers.ResetProgressArea();
+                                            CliHelpers.ResetProgressArea();
                                             Console.WriteLine("✅ All actions completed (HTTP verification). Exiting watcher...");
                                             cts.Cancel();
                                             return;
@@ -1418,7 +1414,6 @@ public sealed class CliApplication
                                 // If we can't get actions, fall back to IsFinished check
                             }
                             
-                            // Fallback to IsFinished check if action check fails
                             if (status.IsFinished)
                             {
                                 CliHelpers.ResetProgressArea();
@@ -1457,8 +1452,6 @@ public sealed class CliApplication
             await polling.RunAsync(sessionId, TimeSpan.FromSeconds(2), async response =>
             {
                 RenderPollingStatus(response);
-                
-                // If Run ID is -1, the generation session is invalid - exit
                 if (response.ActiveRunId == -1)
                 {
                     CliHelpers.ResetProgressArea();
@@ -1467,7 +1460,6 @@ public sealed class CliApplication
                     return;
                 }
                 
-                // Check if all actions are completed
                 try
                 {
                     var stepsData = await client.GetGenerationStepsAsync();
@@ -1511,7 +1503,7 @@ public sealed class CliApplication
 
     private static void RenderPollingStatus(ActiveProjectResponse response)
     {
-        Console.WriteLine($"Run ID: {response.ActiveRunId} | Project: {response.ProjectName} | Finished: {response.IsFinished}");
+        //Console.WriteLine($"Run ID: {response.ActiveRunId} | Project: {response.ProjectName} | Finished: {response.IsFinished}");
     }
 }
 

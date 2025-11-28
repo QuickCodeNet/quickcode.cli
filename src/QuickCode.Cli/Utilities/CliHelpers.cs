@@ -29,75 +29,23 @@ public static class CliHelpers
         {
             return;
         }
-
+        
         var lines = new List<string>
         {
             new string('=', 60),
             "Generation Progress",
             new string('=', 60)
         };
-
+        
         foreach (var step in allSteps.EnumerateArray())
         {
-            var actionId = step.TryGetProperty("actionId", out var actionIdProp)
-                ? actionIdProp.GetInt32()
-                : 0;
-
-            var action = allActions.ValueKind == JsonValueKind.Array
-                ? allActions.EnumerateArray().FirstOrDefault(a =>
-                    a.TryGetProperty("id", out var idProp) && idProp.GetInt32() == actionId)
-                : default;
-
+            var (status, durationLabel) = GetStepStatus(step, allActions);
             var description = step.TryGetProperty("description", out var descProp)
                 ? descProp.GetString() ?? "Unknown"
                 : "Unknown";
-
-            var status = "⏳ Waiting";
-            double? elapsedSeconds = null;
-
-            if (action.ValueKind != JsonValueKind.Undefined)
-            {
-                if (action.TryGetProperty("isCompleted", out var completedProp) && completedProp.GetBoolean())
-                {
-                    status = "✅ Completed";
-                    if (action.TryGetProperty("elapsedTime", out var elapsedProp) &&
-                        elapsedProp.TryGetDouble(out var elapsedMs))
-                    {
-                        elapsedSeconds = elapsedMs / 1000d;
-                    }
-                }
-                else if (action.TryGetProperty("startDate", out var startProp) &&
-                         startProp.ValueKind != JsonValueKind.Null &&
-                         startProp.ValueKind != JsonValueKind.Undefined)
-                {
-                    status = "🔄 In Progress";
-                    if (startProp.ValueKind == JsonValueKind.String &&
-                        DateTimeOffset.TryParse(startProp.GetString(), out var start))
-                    {
-                        elapsedSeconds = Math.Max(0, (DateTimeOffset.UtcNow - start).TotalSeconds);
-                    }
-                }
-            }
-
-            string durationLabel;
-            if (status == "🔄 In Progress")
-            {
-                // Animated spinner like Docker
-                SpinnerFrame = (SpinnerFrame + 1) % SpinnerChars.Length;
-                durationLabel = $"{SpinnerChars[SpinnerFrame]}";
-            }
-            else if (elapsedSeconds.HasValue)
-            {
-                durationLabel = FormatDuration(elapsedSeconds.Value);
-            }
-            else
-            {
-                durationLabel = "--";
-            }
-
             lines.Add($"{status} - {description} [{durationLabel}]");
         }
-
+        
         lines.Add(new string('=', 60));
         lines.Add(string.Empty);
 
@@ -112,32 +60,38 @@ public static class CliHelpers
 
         lock (ProgressLock)
         {
-            // Initialize progress area position on first render
-            if (!ProgressTop.HasValue)
-            {
-                ProgressTop = Console.CursorTop;
-            }
-
             try
             {
+                // Initialize progress area position on first render
+                if (!ProgressTop.HasValue)
+                {
+                    ProgressTop = Console.CursorTop;
+                }
+
                 var startRow = ProgressTop.Value;
                 var bufferWidth = SafeBufferWidth();
 
-                // Move cursor to start of progress area
-                Console.SetCursorPosition(0, startRow);
-
-                // Clear and rewrite each line
+                // Render each line at the correct position
                 for (var i = 0; i < lines.Count; i++)
                 {
-                    var line = lines[i];
-                    // Clear the line
-                    Console.Write("\x1b[2K");
-                    // Write the new content
-                    Console.Write(line);
-                    // If not last line, move to next line
-                    if (i < lines.Count - 1)
+                    var currentRow = startRow + i;
+                    try
                     {
-                        Console.WriteLine();
+                        Console.SetCursorPosition(0, currentRow);
+                        // Clear the entire line
+                        Console.Write("\x1b[K");
+                        // Write the line content (truncate if too long)
+                        var line = lines[i];
+                        if (line.Length > bufferWidth)
+                        {
+                            line = line.Substring(0, bufferWidth);
+                        }
+                        Console.Write(line);
+                    }
+                    catch
+                    {
+                        // If we can't set cursor position, skip this line
+                        continue;
                     }
                 }
 
@@ -146,17 +100,33 @@ public static class CliHelpers
                 {
                     for (var i = lines.Count; i < ProgressHeight; i++)
                     {
-                        Console.Write("\x1b[2K");
-                        if (i < ProgressHeight - 1)
+                        var currentRow = startRow + i;
+                        try
                         {
-                            Console.WriteLine();
+                            Console.SetCursorPosition(0, currentRow);
+                            Console.Write("\x1b[K");
+                        }
+                        catch
+                        {
+                            // Skip if we can't set cursor position
+                            continue;
                         }
                     }
                 }
 
-                // Update height and position cursor after progress area
+                // Update height
                 ProgressHeight = lines.Count;
-                Console.SetCursorPosition(0, startRow + ProgressHeight);
+                
+                // Move cursor to position after progress area (but don't print anything)
+                // This ensures other console writes appear below the progress area
+                try
+                {
+                    Console.SetCursorPosition(0, startRow + ProgressHeight);
+                }
+                catch
+                {
+                    // If we can't move cursor, that's okay
+                }
             }
             catch
             {
@@ -189,6 +159,63 @@ public static class CliHelpers
         }
     }
 
+    private static (string status, string durationLabel) GetStepStatus(JsonElement step, JsonElement allActions)
+    {
+        var actionId = step.TryGetProperty("actionId", out var actionIdProp)
+            ? actionIdProp.GetInt32()
+            : 0;
+
+        var action = allActions.ValueKind == JsonValueKind.Array
+            ? allActions.EnumerateArray().FirstOrDefault(a =>
+                a.TryGetProperty("id", out var idProp) && idProp.GetInt32() == actionId)
+            : default;
+
+        var status = "⏳ Waiting";
+        double? elapsedSeconds = null;
+
+        if (action.ValueKind != JsonValueKind.Undefined)
+        {
+            if (action.TryGetProperty("isCompleted", out var completedProp) && completedProp.GetBoolean())
+            {
+                status = "✅ Completed";
+                if (action.TryGetProperty("elapsedTime", out var elapsedProp) &&
+                    elapsedProp.TryGetDouble(out var elapsedMs))
+                {
+                    elapsedSeconds = elapsedMs / 1000d;
+                }
+            }
+            else if (action.TryGetProperty("startDate", out var startProp) &&
+                     startProp.ValueKind != JsonValueKind.Null &&
+                     startProp.ValueKind != JsonValueKind.Undefined)
+            {
+                status = "🔄 In Progress";
+                if (startProp.ValueKind == JsonValueKind.String &&
+                    DateTimeOffset.TryParse(startProp.GetString(), out var start))
+                {
+                    elapsedSeconds = Math.Max(0, (DateTimeOffset.UtcNow - start).TotalSeconds);
+                }
+            }
+        }
+
+        string durationLabel;
+        if (status == "🔄 In Progress")
+        {
+            // Animated spinner like Docker
+            SpinnerFrame = (SpinnerFrame + 1) % SpinnerChars.Length;
+            durationLabel = $"{SpinnerChars[SpinnerFrame]}";
+        }
+        else if (elapsedSeconds.HasValue)
+        {
+            durationLabel = FormatDuration(elapsedSeconds.Value);
+        }
+        else
+        {
+            durationLabel = "--";
+        }
+
+        return (status, durationLabel);
+    }
+
     public static void ResetProgressArea()
     {
         if (Console.IsOutputRedirected)
@@ -212,23 +239,6 @@ public static class CliHelpers
 
         lock (ProgressLock)
         {
-            if (ProgressTop is null || ProgressHeight <= 0)
-            {
-                ProgressTop = null;
-                ProgressHeight = 0;
-                return;
-            }
-
-            var width = Math.Max(1, SafeBufferWidth());
-            var targetTop = Math.Clamp(ProgressTop.Value, 0, Math.Max(Console.BufferHeight - 1, 0));
-            SetCursorSafely(targetTop);
-
-            for (var i = 0; i < ProgressHeight; i++)
-            {
-                WritePaddedLine(string.Empty, width);
-            }
-
-            SetCursorSafely(targetTop);
             ProgressTop = null;
             ProgressHeight = 0;
         }
