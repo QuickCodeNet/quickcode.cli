@@ -1504,13 +1504,13 @@ public sealed class CliApplication
                 // Render progress area even if steps are empty
                 CliHelpers.RenderStepProgress(allSteps, allActions);
             }
-            catch (Exception ex)
+            catch (Exception inEx)
             {
-                // If we can't get initial steps, render empty progress area
                 if (verbose)
                 {
-                    Console.WriteLine($"⚠️ Could not get initial steps: {ex.Message}");
+                    Console.WriteLine($"⚠️ Could not get initial steps: {inEx.Message}");
                 }
+                
                 CliHelpers.RenderStepProgress(default(JsonElement), default(JsonElement));
             }
 
