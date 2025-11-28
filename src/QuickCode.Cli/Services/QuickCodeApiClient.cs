@@ -89,6 +89,9 @@ public sealed class QuickCodeApiClient : IDisposable
             projectName,
             projectEmail = email,
             projectSecretCode = secret,
+            projectsKey = projectName,
+            projectsEmail = email,
+            projectsSecretCode = secret,
             moduleName,
             moduleTemplateKey,
             dbTypeKey,
@@ -105,6 +108,9 @@ public sealed class QuickCodeApiClient : IDisposable
             projectName,
             projectEmail = email,
             projectSecretCode = secret,
+            projectsKey = projectName,
+            projectsEmail = email,
+            projectsSecretCode = secret,
             moduleName
         });
 
@@ -121,6 +127,9 @@ public sealed class QuickCodeApiClient : IDisposable
             projectName,
             projectEmail = email,
             projectSecretCode = secret,
+            projectsKey = projectName,
+            projectsEmail = email,
+            projectsSecretCode = secret,
             moduleName,
             moduleTemplateKey,
             dbml,
@@ -137,6 +146,9 @@ public sealed class QuickCodeApiClient : IDisposable
             projectName,
             projectEmail = email,
             projectSecretCode = secret,
+            projectsKey = projectName,
+            projectsEmail = email,
+            projectsSecretCode = secret,
             sessionId
         });
 
