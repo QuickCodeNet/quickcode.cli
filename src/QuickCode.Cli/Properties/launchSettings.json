@@ -1,0 +1,70 @@
+{
+  "profiles": {
+    "demo generate": {
+      "commandName": "Project",
+      "commandLineArgs": "demo generate --watch",
+      "workingDirectory": "$(ProjectDir)/../../projects"
+    },
+    "demo check": {
+      "commandName": "Project",
+      "commandLineArgs": "demo check",
+      "workingDirectory": "$(ProjectDir)/../../projects"
+    },
+    "demo get-dbmls": {
+      "commandName": "Project",
+      "commandLineArgs": "demo get-dbmls",
+      "workingDirectory": "$(ProjectDir)/../../projects"
+    },
+    "demo update-dbmls": {
+      "commandName": "Project",
+      "commandLineArgs": "demo update-dbmls",
+      "workingDirectory": "$(ProjectDir)/../../projects"
+    },
+    "demo validate": {
+      "commandName": "Project",
+      "commandLineArgs": "demo validate",
+      "workingDirectory": "$(ProjectDir)/../../projects"
+    },
+    "demo create": {
+      "commandName": "Project",
+      "commandLineArgs": "demo create --email demo@quickcode.net",
+      "workingDirectory": "$(ProjectDir)/../../projects"
+    },
+    "demo forgot-secret": {
+      "commandName": "Project",
+      "commandLineArgs": "demo forgot-secret",
+      "workingDirectory": "$(ProjectDir)/../../projects"
+    },
+    "demo verify-secret": {
+      "commandName": "Project",
+      "commandLineArgs": "demo verify-secret",
+      "workingDirectory": "$(ProjectDir)/../../projects"
+    },
+    "demo remove": {
+      "commandName": "Project",
+      "commandLineArgs": "demo remove",
+      "workingDirectory": "$(ProjectDir)/../../projects"
+    },
+    "demo modules": {
+      "commandName": "Project",
+      "commandLineArgs": "demo modules",
+      "workingDirectory": "$(ProjectDir)/../../projects"
+    },
+    "templates": {
+      "commandName": "Project",
+      "commandLineArgs": "templates",
+      "workingDirectory": "$(ProjectDir)/../../projects"
+    },
+    "config validate": {
+      "commandName": "Project",
+      "commandLineArgs": "config validate",
+      "workingDirectory": "$(ProjectDir)/../../projects"
+    },
+    "help": {
+      "commandName": "Project",
+      "commandLineArgs": "--help",
+      "workingDirectory": "$(ProjectDir)/../../projects"
+    }
+  }
+}
+

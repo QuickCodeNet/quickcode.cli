@@ -6,6 +6,10 @@ namespace QuickCode.Cli.Utilities;
 
 public static class CliHelpers
 {
+    private static readonly object ProgressLock = new();
+    private static int? ProgressTop;
+    private static int ProgressHeight;
+
     public static string GenerateSessionId()
     {
         var buffer = RandomNumberGenerator.GetBytes(16);
@@ -24,9 +28,12 @@ public static class CliHelpers
             return;
         }
 
-        Console.WriteLine(new string('=', 60));
-        Console.WriteLine("Generation Progress");
-        Console.WriteLine(new string('=', 60));
+        var lines = new List<string>
+        {
+            new string('=', 60),
+            "Generation Progress",
+            new string('=', 60)
+        };
 
         foreach (var step in allSteps.EnumerateArray())
         {
@@ -84,10 +91,93 @@ public static class CliHelpers
                 durationLabel = "--";
             }
 
-            Console.WriteLine($"{status} - {description} [{durationLabel}]");
+            lines.Add($"{status} - {description} [{durationLabel}]");
         }
 
-        Console.WriteLine(new string('=', 60));
+        lines.Add(new string('=', 60));
+        lines.Add(string.Empty);
+
+        if (Console.IsOutputRedirected)
+        {
+            foreach (var line in lines)
+            {
+                Console.WriteLine(line);
+            }
+            return;
+        }
+
+        lock (ProgressLock)
+        {
+            var width = Math.Max(1, SafeBufferWidth());
+
+            if (ProgressTop is null)
+            {
+                ProgressTop = Console.CursorTop;
+            }
+
+            var targetTop = Math.Clamp(ProgressTop.Value, 0, Math.Max(Console.BufferHeight - 1, 0));
+            SetCursorSafely(targetTop);
+
+            foreach (var line in lines)
+            {
+                WritePaddedLine(line, width);
+            }
+
+            for (var i = lines.Count; i < ProgressHeight; i++)
+            {
+                WritePaddedLine(string.Empty, width);
+            }
+
+            ProgressHeight = lines.Count;
+            var cursorRow = Math.Clamp(targetTop + ProgressHeight, 0, Math.Max(Console.BufferHeight - 1, 0));
+            SetCursorSafely(cursorRow);
+            ProgressTop = targetTop;
+        }
+    }
+
+    public static void ResetProgressArea()
+    {
+        if (Console.IsOutputRedirected)
+        {
+            return;
+        }
+
+        lock (ProgressLock)
+        {
+            ProgressTop = null;
+            ProgressHeight = 0;
+        }
+    }
+
+    public static void ReleaseProgressArea()
+    {
+        if (Console.IsOutputRedirected)
+        {
+            return;
+        }
+
+        lock (ProgressLock)
+        {
+            if (ProgressTop is null || ProgressHeight <= 0)
+            {
+                ProgressTop = null;
+                ProgressHeight = 0;
+                return;
+            }
+
+            var width = Math.Max(1, SafeBufferWidth());
+            var targetTop = Math.Clamp(ProgressTop.Value, 0, Math.Max(Console.BufferHeight - 1, 0));
+            SetCursorSafely(targetTop);
+
+            for (var i = 0; i < ProgressHeight; i++)
+            {
+                WritePaddedLine(string.Empty, width);
+            }
+
+            SetCursorSafely(targetTop);
+            ProgressTop = null;
+            ProgressHeight = 0;
+        }
     }
 
     public static void RenderModuleList(JsonElement modules)
@@ -165,6 +255,43 @@ public static class CliHelpers
         }
 
         return $"{seconds:F1}s";
+    }
+
+    private static int SafeBufferWidth()
+    {
+        try
+        {
+            return Console.BufferWidth;
+        }
+        catch
+        {
+            return 120;
+        }
+    }
+
+    private static void SetCursorSafely(int top)
+    {
+        try
+        {
+            Console.SetCursorPosition(0, Math.Max(0, top));
+        }
+        catch
+        {
+            // Ignore when cursor cannot be moved (e.g. redirected output)
+        }
+    }
+
+    private static void WritePaddedLine(string content, int width)
+    {
+        if (content.Length >= width)
+        {
+            Console.WriteLine(content);
+            return;
+        }
+
+        Console.Write(content);
+        Console.Write(new string(' ', width - content.Length));
+        Console.WriteLine();
     }
 }
 

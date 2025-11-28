@@ -1344,6 +1344,7 @@ public sealed class CliApplication
     private async Task WatchGenerationAsync(QuickCodeConfig config, QuickCodeApiClient client, string sessionId, bool verbose)
     {
         using var cts = new CancellationTokenSource();
+        CliHelpers.ResetProgressArea();
         Console.CancelKeyPress += (sender, args) =>
         {
             args.Cancel = true;
@@ -1364,6 +1365,7 @@ public sealed class CliApplication
                 CliHelpers.RenderStepProgress(evt.AllSteps, evt.AllActions);
                 if (CliHelpers.AreAllActionsCompleted(evt.AllActions))
                 {
+                    CliHelpers.ResetProgressArea();
                     Console.WriteLine("✅ Generation completed. Exiting watcher...");
                     cts.Cancel();
                     return;
@@ -1382,6 +1384,15 @@ public sealed class CliApplication
                         {
                             RenderPollingStatus(status);
                             
+                            // If Run ID is -1, the generation session is invalid - exit
+                            if (status.ActiveRunId == -1)
+                            {
+                                CliHelpers.ResetProgressArea();
+                                Console.WriteLine("❌ Invalid generation session (Run ID: -1). Exiting watcher...");
+                                cts.Cancel();
+                                return;
+                            }
+                            
                             // Check if all actions are completed
                             try
                             {
@@ -1394,6 +1405,7 @@ public sealed class CliApplication
                                     {
                                         if (CliHelpers.AreAllActionsCompleted(allActions))
                                         {
+                                CliHelpers.ResetProgressArea();
                                             Console.WriteLine("✅ All actions completed (HTTP verification). Exiting watcher...");
                                             cts.Cancel();
                                             return;
@@ -1409,6 +1421,7 @@ public sealed class CliApplication
                             // Fallback to IsFinished check if action check fails
                             if (status.IsFinished)
                             {
+                                CliHelpers.ResetProgressArea();
                                 Console.WriteLine("✅ Generation completed (HTTP verification). Exiting watcher...");
                                 cts.Cancel();
                             }
@@ -1445,6 +1458,15 @@ public sealed class CliApplication
             {
                 RenderPollingStatus(response);
                 
+                // If Run ID is -1, the generation session is invalid - exit
+                if (response.ActiveRunId == -1)
+                {
+                    CliHelpers.ResetProgressArea();
+                    Console.WriteLine("❌ Invalid generation session (Run ID: -1). Exiting watcher...");
+                    cts.Cancel();
+                    return;
+                }
+                
                 // Check if all actions are completed
                 try
                 {
@@ -1457,6 +1479,7 @@ public sealed class CliApplication
                         {
                             if (CliHelpers.AreAllActionsCompleted(allActions))
                             {
+                                CliHelpers.ResetProgressArea();
                                 Console.WriteLine("✅ All actions completed. Exiting watcher...");
                                 cts.Cancel();
                                 return;
@@ -1472,6 +1495,7 @@ public sealed class CliApplication
                 // Fallback to IsFinished check if action check fails
                 if (response.IsFinished)
                 {
+                    CliHelpers.ResetProgressArea();
                     Console.WriteLine("✅ Generation completed. Exiting watcher...");
                     cts.Cancel();
                 }
@@ -1481,6 +1505,7 @@ public sealed class CliApplication
         {
             verifyCts?.Cancel();
             verifyCts?.Dispose();
+            CliHelpers.ResetProgressArea();
         }
     }
 
