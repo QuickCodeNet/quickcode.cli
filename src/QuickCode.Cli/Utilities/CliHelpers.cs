@@ -9,6 +9,8 @@ public static class CliHelpers
     private static readonly object ProgressLock = new();
     private static int? ProgressTop;
     private static int ProgressHeight;
+    private static int SpinnerFrame;
+    private static readonly char[] SpinnerChars = { '|', '/', '-', '\\' };
 
     public static string GenerateSessionId()
     {
@@ -80,7 +82,9 @@ public static class CliHelpers
             string durationLabel;
             if (status == "🔄 In Progress")
             {
-                durationLabel = "...";
+                // Animated spinner like Docker
+                SpinnerFrame = (SpinnerFrame + 1) % SpinnerChars.Length;
+                durationLabel = $"{SpinnerChars[SpinnerFrame]}";
             }
             else if (elapsedSeconds.HasValue)
             {
@@ -108,30 +112,80 @@ public static class CliHelpers
 
         lock (ProgressLock)
         {
-            var width = Math.Max(1, SafeBufferWidth());
-
-            if (ProgressTop is null)
+            // Initialize progress area position on first render
+            if (!ProgressTop.HasValue)
             {
                 ProgressTop = Console.CursorTop;
             }
 
-            var targetTop = Math.Clamp(ProgressTop.Value, 0, Math.Max(Console.BufferHeight - 1, 0));
-            SetCursorSafely(targetTop);
-
-            foreach (var line in lines)
+            try
             {
-                WritePaddedLine(line, width);
-            }
+                var startRow = ProgressTop.Value;
+                var bufferWidth = SafeBufferWidth();
 
-            for (var i = lines.Count; i < ProgressHeight; i++)
+                // Move cursor to start of progress area
+                Console.SetCursorPosition(0, startRow);
+
+                // Clear and rewrite each line
+                for (var i = 0; i < lines.Count; i++)
+                {
+                    var line = lines[i];
+                    // Clear the line
+                    Console.Write("\x1b[2K");
+                    // Write the new content
+                    Console.Write(line);
+                    // If not last line, move to next line
+                    if (i < lines.Count - 1)
+                    {
+                        Console.WriteLine();
+                    }
+                }
+
+                // Clear any remaining lines from previous render
+                if (ProgressHeight > lines.Count)
+                {
+                    for (var i = lines.Count; i < ProgressHeight; i++)
+                    {
+                        Console.Write("\x1b[2K");
+                        if (i < ProgressHeight - 1)
+                        {
+                            Console.WriteLine();
+                        }
+                    }
+                }
+
+                // Update height and position cursor after progress area
+                ProgressHeight = lines.Count;
+                Console.SetCursorPosition(0, startRow + ProgressHeight);
+            }
+            catch
             {
-                WritePaddedLine(string.Empty, width);
-            }
+                // Fallback: if cursor positioning fails, use simple approach
+                try
+                {
+                    if (ProgressTop.HasValue)
+                    {
+                        Console.SetCursorPosition(0, ProgressTop.Value);
+                    }
 
-            ProgressHeight = lines.Count;
-            var cursorRow = Math.Clamp(targetTop + ProgressHeight, 0, Math.Max(Console.BufferHeight - 1, 0));
-            SetCursorSafely(cursorRow);
-            ProgressTop = targetTop;
+                    foreach (var line in lines)
+                    {
+                        Console.WriteLine(line);
+                    }
+
+                    ProgressHeight = lines.Count;
+                }
+                catch
+                {
+                    // Last resort: just write normally
+                    foreach (var line in lines)
+                    {
+                        Console.WriteLine(line);
+                    }
+                    ProgressTop = null;
+                    ProgressHeight = 0;
+                }
+            }
         }
     }
 
