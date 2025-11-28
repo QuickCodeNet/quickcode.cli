@@ -1359,18 +1359,32 @@ public sealed class CliApplication
             try
             {
                 var initialStepsData = await client.GetGenerationStepsAsync();
+                var allSteps = default(JsonElement);
+                var allActions = default(JsonElement);
+                
                 if (initialStepsData.ValueKind == JsonValueKind.Object)
                 {
-                    if (initialStepsData.TryGetProperty("allSteps", out var allSteps) &&
-                        initialStepsData.TryGetProperty("allActions", out var allActions))
+                    if (initialStepsData.TryGetProperty("allSteps", out var stepsProp))
                     {
-                        CliHelpers.RenderStepProgress(allSteps, allActions);
+                        allSteps = stepsProp;
+                    }
+                    if (initialStepsData.TryGetProperty("allActions", out var actionsProp))
+                    {
+                        allActions = actionsProp;
                     }
                 }
+                
+                // Render progress area even if steps are empty
+                CliHelpers.RenderStepProgress(allSteps, allActions);
             }
-            catch
+            catch (Exception ex)
             {
-                // If we can't get initial steps, that's okay - we'll render when SignalR updates arrive
+                // If we can't get initial steps, render empty progress area
+                if (verbose)
+                {
+                    Console.WriteLine($"⚠️ Could not get initial steps: {ex.Message}");
+                }
+                CliHelpers.RenderStepProgress(default(JsonElement), default(JsonElement));
             }
 
             await using var watcher = new GenerationWatcher(config.ApiUrl, sessionId, verbose);
@@ -1472,18 +1486,32 @@ public sealed class CliApplication
             try
             {
                 var initialStepsData = await client.GetGenerationStepsAsync();
+                var allSteps = default(JsonElement);
+                var allActions = default(JsonElement);
+                
                 if (initialStepsData.ValueKind == JsonValueKind.Object)
                 {
-                    if (initialStepsData.TryGetProperty("allSteps", out var allSteps) &&
-                        initialStepsData.TryGetProperty("allActions", out var allActions))
+                    if (initialStepsData.TryGetProperty("allSteps", out var stepsProp))
                     {
-                        CliHelpers.RenderStepProgress(allSteps, allActions);
+                        allSteps = stepsProp;
+                    }
+                    if (initialStepsData.TryGetProperty("allActions", out var actionsProp))
+                    {
+                        allActions = actionsProp;
                     }
                 }
+                
+                // Render progress area even if steps are empty
+                CliHelpers.RenderStepProgress(allSteps, allActions);
             }
-            catch
+            catch (Exception ex)
             {
-                // If we can't get initial steps, that's okay
+                // If we can't get initial steps, render empty progress area
+                if (verbose)
+                {
+                    Console.WriteLine($"⚠️ Could not get initial steps: {ex.Message}");
+                }
+                CliHelpers.RenderStepProgress(default(JsonElement), default(JsonElement));
             }
 
             var polling = new GenerationPollingService(client);

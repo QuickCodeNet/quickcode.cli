@@ -25,11 +25,6 @@ public static class CliHelpers
 
     public static void RenderStepProgress(JsonElement allSteps, JsonElement allActions)
     {
-        if (allSteps.ValueKind != JsonValueKind.Array)
-        {
-            return;
-        }
-        
         var lines = new List<string>
         {
             new string('=', 60),
@@ -37,13 +32,22 @@ public static class CliHelpers
             new string('=', 60)
         };
         
-        foreach (var step in allSteps.EnumerateArray())
+        // Only process steps if allSteps is a valid array
+        if (allSteps.ValueKind == JsonValueKind.Array)
         {
-            var (status, durationLabel) = GetStepStatus(step, allActions);
-            var description = step.TryGetProperty("description", out var descProp)
-                ? descProp.GetString() ?? "Unknown"
-                : "Unknown";
-            lines.Add($"{status} - {description} [{durationLabel}]");
+            foreach (var step in allSteps.EnumerateArray())
+            {
+                var (status, durationLabel) = GetStepStatus(step, allActions);
+                var description = step.TryGetProperty("description", out var descProp)
+                    ? descProp.GetString() ?? "Unknown"
+                    : "Unknown";
+                lines.Add($"{status} - {description} [{durationLabel}]");
+            }
+        }
+        else
+        {
+            // If no steps available, show a waiting message
+            lines.Add("⏳ Waiting for generation steps...");
         }
         
         lines.Add(new string('=', 60));
@@ -65,16 +69,38 @@ public static class CliHelpers
                 // Initialize progress area position on first render
                 if (!ProgressTop.HasValue)
                 {
-                    ProgressTop = Console.CursorTop;
+                    var currentTop = Console.CursorTop;
+                    // On Mac, sometimes CursorTop can be 0 or negative, so we ensure it's valid
+                    if (currentTop < 0)
+                    {
+                        currentTop = 0;
+                    }
+                    ProgressTop = currentTop;
                 }
 
                 var startRow = ProgressTop.Value;
                 var bufferWidth = SafeBufferWidth();
+                var bufferHeight = SafeBufferHeight();
+
+                // Validate startRow is within buffer bounds
+                if (startRow < 0 || startRow >= bufferHeight)
+                {
+                    // Reset if invalid
+                    ProgressTop = Console.CursorTop;
+                    startRow = ProgressTop.Value;
+                }
 
                 // Render each line at the correct position
                 for (var i = 0; i < lines.Count; i++)
                 {
                     var currentRow = startRow + i;
+                    
+                    // Skip if row is out of bounds
+                    if (currentRow < 0 || currentRow >= bufferHeight)
+                    {
+                        continue;
+                    }
+                    
                     try
                     {
                         Console.SetCursorPosition(0, currentRow);
@@ -90,8 +116,9 @@ public static class CliHelpers
                     }
                     catch
                     {
-                        // If we can't set cursor position, skip this line
-                        continue;
+                        // If we can't set cursor position, try fallback
+                        // Write the line normally (this will cause scrolling but at least it's visible)
+                        Console.WriteLine(lines[i]);
                     }
                 }
 
@@ -101,6 +128,12 @@ public static class CliHelpers
                     for (var i = lines.Count; i < ProgressHeight; i++)
                     {
                         var currentRow = startRow + i;
+                        
+                        if (currentRow < 0 || currentRow >= bufferHeight)
+                        {
+                            continue;
+                        }
+                        
                         try
                         {
                             Console.SetCursorPosition(0, currentRow);
@@ -121,7 +154,11 @@ public static class CliHelpers
                 // This ensures other console writes appear below the progress area
                 try
                 {
-                    Console.SetCursorPosition(0, startRow + ProgressHeight);
+                    var newCursorTop = startRow + ProgressHeight;
+                    if (newCursorTop >= 0 && newCursorTop < bufferHeight)
+                    {
+                        Console.SetCursorPosition(0, newCursorTop);
+                    }
                 }
                 catch
                 {
@@ -135,7 +172,14 @@ public static class CliHelpers
                 {
                     if (ProgressTop.HasValue)
                     {
-                        Console.SetCursorPosition(0, ProgressTop.Value);
+                        try
+                        {
+                            Console.SetCursorPosition(0, ProgressTop.Value);
+                        }
+                        catch
+                        {
+                            // Can't set cursor, just write normally
+                        }
                     }
 
                     foreach (var line in lines)
@@ -325,11 +369,25 @@ public static class CliHelpers
     {
         try
         {
-            return Console.BufferWidth;
+            var width = Console.BufferWidth;
+            return width > 0 ? width : 120;
         }
         catch
         {
             return 120;
+        }
+    }
+
+    private static int SafeBufferHeight()
+    {
+        try
+        {
+            var height = Console.BufferHeight;
+            return height > 0 ? height : 1000;
+        }
+        catch
+        {
+            return 1000;
         }
     }
 
