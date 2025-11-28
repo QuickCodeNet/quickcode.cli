@@ -1395,7 +1395,12 @@ public sealed class CliApplication
                 verifyCts = new CancellationTokenSource();
 
                 CliHelpers.RenderStepProgress(evt.AllSteps, evt.AllActions);
-                if (CliHelpers.AreAllActionsCompleted(evt.AllActions))
+                
+                // Check both actions and steps for completion
+                var allActionsCompleted = CliHelpers.AreAllActionsCompleted(evt.AllActions);
+                var allStepsCompleted = CliHelpers.AreAllStepsCompleted(evt.AllSteps, evt.AllActions);
+                
+                if (allActionsCompleted || allStepsCompleted)
                 {
                     CliHelpers.ResetProgressArea();
                     Console.WriteLine("✅ Generation completed. Exiting watcher...");
@@ -1433,7 +1438,11 @@ public sealed class CliApplication
                                     {
                                         CliHelpers.RenderStepProgress(allSteps, allActions);
                                         
-                                        if (CliHelpers.AreAllActionsCompleted(allActions))
+                                        // Check both actions and steps for completion
+                                        var allActionsCompleted = CliHelpers.AreAllActionsCompleted(allActions);
+                                        var allStepsCompleted = CliHelpers.AreAllStepsCompleted(allSteps, allActions);
+                                        
+                                        if (allActionsCompleted || allStepsCompleted)
                                         {
                                             CliHelpers.ResetProgressArea();
                                             Console.WriteLine("✅ All actions completed (HTTP verification). Exiting watcher...");
@@ -1536,7 +1545,11 @@ public sealed class CliApplication
                         {
                             CliHelpers.RenderStepProgress(allSteps, allActions);
                             
-                            if (CliHelpers.AreAllActionsCompleted(allActions))
+                            // Check both actions and steps for completion
+                            var allActionsCompleted = CliHelpers.AreAllActionsCompleted(allActions);
+                            var allStepsCompleted = CliHelpers.AreAllStepsCompleted(allSteps, allActions);
+                            
+                            if (allActionsCompleted || allStepsCompleted)
                             {
                                 CliHelpers.ResetProgressArea();
                                 Console.WriteLine("✅ All actions completed. Exiting watcher...");

@@ -299,13 +299,58 @@ public static class CliHelpers
             return false;
         }
 
-        foreach (var action in allActions.EnumerateArray())
+        var actionsArray = allActions.EnumerateArray().ToList();
+        if (actionsArray.Count == 0)
+        {
+            return false;
+        }
+
+        foreach (var action in actionsArray)
         {
             if (!action.TryGetProperty("isCompleted", out var completedProp) ||
                 !completedProp.GetBoolean())
             {
                 return false;
             }
+        }
+
+        return true;
+    }
+
+    public static bool AreAllStepsCompleted(JsonElement allSteps, JsonElement allActions)
+    {
+        if (allSteps.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        var stepsArray = allSteps.EnumerateArray().ToList();
+        if (stepsArray.Count == 0)
+        {
+            return false;
+        }
+
+        foreach (var step in stepsArray)
+        {
+            var actionId = step.TryGetProperty("actionId", out var actionIdProp)
+                ? actionIdProp.GetInt32()
+                : 0;
+
+            var action = allActions.ValueKind == JsonValueKind.Array
+                ? allActions.EnumerateArray().FirstOrDefault(a =>
+                    a.TryGetProperty("id", out var idProp) && idProp.GetInt32() == actionId)
+                : default;
+
+            // If action exists, check if it's completed
+            if (action.ValueKind != JsonValueKind.Undefined)
+            {
+                if (!action.TryGetProperty("isCompleted", out var completedProp) ||
+                    !completedProp.GetBoolean())
+                {
+                    return false;
+                }
+            }
+            // If action doesn't exist, we can't determine completion status
         }
 
         return true;
