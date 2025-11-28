@@ -1355,6 +1355,24 @@ public sealed class CliApplication
 
         try
         {
+            // Render initial progress area immediately
+            try
+            {
+                var initialStepsData = await client.GetGenerationStepsAsync();
+                if (initialStepsData.ValueKind == JsonValueKind.Object)
+                {
+                    if (initialStepsData.TryGetProperty("allSteps", out var allSteps) &&
+                        initialStepsData.TryGetProperty("allActions", out var allActions))
+                    {
+                        CliHelpers.RenderStepProgress(allSteps, allActions);
+                    }
+                }
+            }
+            catch
+            {
+                // If we can't get initial steps, that's okay - we'll render when SignalR updates arrive
+            }
+
             await using var watcher = new GenerationWatcher(config.ApiUrl, sessionId, verbose);
             watcher.OnUpdate += evt =>
             {
@@ -1396,9 +1414,11 @@ public sealed class CliApplication
                                 var stepsData = await client.GetGenerationStepsAsync();
                                 if (stepsData.ValueKind == JsonValueKind.Object)
                                 {
-                                    if (stepsData.TryGetProperty("allActions", out var allActions) ||
-                                        stepsData.TryGetProperty("actions", out allActions))
+                                    if (stepsData.TryGetProperty("allSteps", out var allSteps) &&
+                                        stepsData.TryGetProperty("allActions", out var allActions))
                                     {
+                                        CliHelpers.RenderStepProgress(allSteps, allActions);
+                                        
                                         if (CliHelpers.AreAllActionsCompleted(allActions))
                                         {
                                             CliHelpers.ResetProgressArea();
@@ -1448,6 +1468,24 @@ public sealed class CliApplication
             Console.WriteLine($"SignalR error: {ex.Message}");
             Console.WriteLine("Falling back to HTTP polling...");
 
+            // Render initial progress area for HTTP polling fallback
+            try
+            {
+                var initialStepsData = await client.GetGenerationStepsAsync();
+                if (initialStepsData.ValueKind == JsonValueKind.Object)
+                {
+                    if (initialStepsData.TryGetProperty("allSteps", out var allSteps) &&
+                        initialStepsData.TryGetProperty("allActions", out var allActions))
+                    {
+                        CliHelpers.RenderStepProgress(allSteps, allActions);
+                    }
+                }
+            }
+            catch
+            {
+                // If we can't get initial steps, that's okay
+            }
+
             var polling = new GenerationPollingService(client);
             await polling.RunAsync(sessionId, TimeSpan.FromSeconds(2), async response =>
             {
@@ -1465,10 +1503,11 @@ public sealed class CliApplication
                     var stepsData = await client.GetGenerationStepsAsync();
                     if (stepsData.ValueKind == JsonValueKind.Object)
                     {
-                        // Try to extract allActions from the response
-                        if (stepsData.TryGetProperty("allActions", out var allActions) ||
-                            stepsData.TryGetProperty("actions", out allActions))
+                        if (stepsData.TryGetProperty("allSteps", out var allSteps) &&
+                            stepsData.TryGetProperty("allActions", out var allActions))
                         {
+                            CliHelpers.RenderStepProgress(allSteps, allActions);
+                            
                             if (CliHelpers.AreAllActionsCompleted(allActions))
                             {
                                 CliHelpers.ResetProgressArea();
