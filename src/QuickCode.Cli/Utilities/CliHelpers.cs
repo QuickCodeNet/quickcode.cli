@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Terminal.Gui;
 
 namespace QuickCode.Cli.Utilities;
 
@@ -10,9 +9,8 @@ public static class CliHelpers
     private static readonly object ProgressLock = new();
     private static int SpinnerFrame;
     private static readonly string[] SpinnerChars = { "→", "↘", "↓", "↙", "←", "↖", "↑", "↗" };
-    private static TextView? _progressTextView;
-    private static bool _terminalGuiInitialized;
-    private static Thread? _terminalGuiThread;
+    private static int? _progressTop;
+    private static int _progressHeight;
 
     public static string GenerateSessionId()
     {
@@ -64,137 +62,155 @@ public static class CliHelpers
         {
             try
             {
-                // Initialize Terminal.Gui on first render
-                if (!_terminalGuiInitialized)
+                // Initialize progress area position on first render
+                if (!_progressTop.HasValue)
                 {
-                    _terminalGuiThread = new Thread(() =>
-                    {
-                        Application.Init();
-                        _terminalGuiInitialized = true;
-                        
-                        // Create color scheme with black background
-                        var colorScheme = new ColorScheme
-                        {
-                            Normal = new Terminal.Gui.Attribute(Color.White, Color.Black),
-                            Focus = new Terminal.Gui.Attribute(Color.BrightCyan, Color.Black),
-                            HotNormal = new Terminal.Gui.Attribute(Color.BrightYellow, Color.Black),
-                            HotFocus = new Terminal.Gui.Attribute(Color.BrightYellow, Color.Black),
-                            Disabled = new Terminal.Gui.Attribute(Color.Gray, Color.Black)
-                        };
-                        
-                        // Create TextView for displaying progress with black background (no frame)
-                        _progressTextView = new TextView
-                        {
-                            X = 0,
-                            Y = 0,
-                            Width = Dim.Fill(),
-                            Height = Dim.Fill(),
-                            ReadOnly = true,
-                            WordWrap = false,
-                            ColorScheme = colorScheme
-                        };
-                        
-                        // Add directly to Top without Window frame
-                        Application.Top.Add(_progressTextView);
-                        Application.Refresh();
-                        
-                        // Run event loop
-                        Application.Run();
-                    })
-                    {
-                        IsBackground = true
-                    };
-                    _terminalGuiThread.Start();
+                    // On first render, write a newline to ensure we're on a fresh line
+                    // Then save the cursor position
+                    Console.WriteLine();
+                    _progressTop = Console.CursorTop - 1; // -1 because WriteLine advanced cursor
+                }
+
+                var startRow = _progressTop.Value;
+                var bufferWidth = SafeBufferWidth();
+                var currentCursorTop = Console.CursorTop;
+
+                // Calculate how many lines to move
+                var linesToMove = currentCursorTop - startRow;
+
+                // Move cursor to start of progress area
+                if (linesToMove > 0)
+                {
+                    // Need to move up
+                    Console.Write($"\x1b[{linesToMove}A");
+                }
+                else if (linesToMove < 0)
+                {
+                    // Need to move down (shouldn't normally happen)
+                    Console.Write($"\x1b[{-linesToMove}B");
+                }
+
+                // Render each line, overwriting existing content
+                for (var i = 0; i < stepLines.Count; i++)
+                {
+                    // Move to beginning of line and clear it
+                    Console.Write("\r\x1b[K");
                     
-                    // Wait a bit for Terminal.Gui to initialize
-                    Thread.Sleep(100);
+                    var line = stepLines[i];
+                    if (line.Length > bufferWidth)
+                    {
+                        line = line.Substring(0, bufferWidth);
+                    }
+                    Console.Write(line);
+                    
+                    // If not last line, move to next line
+                    if (i < stepLines.Count - 1)
+                    {
+                        Console.Write("\n");
+                    }
+                }
+
+                // Clear any remaining lines from previous render
+                if (_progressHeight > stepLines.Count)
+                {
+                    for (var i = stepLines.Count; i < _progressHeight; i++)
+                    {
+                        Console.Write("\n\r\x1b[K");
+                    }
+                }
+
+                // Update height
+                _progressHeight = stepLines.Count;
+                
+                // Move cursor to end of progress area (after last line)
+                var expectedFinalRow = startRow + stepLines.Count;
+                var actualFinalRow = Console.CursorTop;
+                var finalAdjustment = actualFinalRow - expectedFinalRow;
+                
+                if (finalAdjustment != 0)
+                {
+                    if (finalAdjustment > 0)
+                    {
+                        Console.Write($"\x1b[{finalAdjustment}A");
+                    }
+                    else
+                    {
+                        Console.Write($"\x1b[{-finalAdjustment}B");
+                    }
                 }
                 
-                // Update existing text view
-                if (_progressTextView != null && Application.MainLoop != null)
-                {
-                    Application.MainLoop.Invoke(() =>
-                    {
-                        if (_progressTextView != null)
-                        {
-                            var text = string.Join("\n", stepLines);
-                            _progressTextView.Text = text;
-                            Application.Refresh();
-                        }
-                    });
-                }
+                // Move to beginning of line
+                Console.Write("\r");
             }
             catch
             {
-                // Fallback: if Terminal.Gui fails, use simple console output
-                Console.WriteLine(new string('=', 60));
-                Console.WriteLine("Generation Progress");
-                Console.WriteLine(new string('=', 60));
+                // Fallback: if cursor positioning fails, use simple approach
                 foreach (var line in stepLines)
                 {
                     Console.WriteLine(line);
                 }
-                Console.WriteLine(new string('=', 60));
+                _progressTop = null;
+                _progressHeight = 0;
             }
         }
     }
 
     private static (string status, string durationLabel) GetStepStatus(JsonElement step, JsonElement allActions)
-    {
-        var actionId = step.TryGetProperty("actionId", out var actionIdProp)
-            ? actionIdProp.GetInt32()
-            : 0;
-
-        var action = allActions.ValueKind == JsonValueKind.Array
-            ? allActions.EnumerateArray().FirstOrDefault(a =>
-                a.TryGetProperty("id", out var idProp) && idProp.GetInt32() == actionId)
-            : default;
-
-        var status = "⏳ Waiting";
-        double? elapsedSeconds = null;
-
-        if (action.ValueKind != JsonValueKind.Undefined)
         {
-            if (action.TryGetProperty("isCompleted", out var completedProp) && completedProp.GetBoolean())
+            var actionId = step.TryGetProperty("actionId", out var actionIdProp)
+                ? actionIdProp.GetInt32()
+                : 0;
+
+            var action = allActions.ValueKind == JsonValueKind.Array
+                ? allActions.EnumerateArray().FirstOrDefault(a =>
+                    a.TryGetProperty("id", out var idProp) && idProp.GetInt32() == actionId)
+                : default;
+
+            var status = "⏳ Waiting";
+            double? elapsedSeconds = null;
+
+            if (action.ValueKind != JsonValueKind.Undefined)
             {
-                status = "✅ Completed";
-                if (action.TryGetProperty("elapsedTime", out var elapsedProp) &&
-                    elapsedProp.TryGetDouble(out var elapsedMs))
+                if (action.TryGetProperty("isCompleted", out var completedProp) && completedProp.GetBoolean())
                 {
-                    elapsedSeconds = elapsedMs / 1000d;
+                    status = "✅ Completed";
+                    if (action.TryGetProperty("elapsedTime", out var elapsedProp) &&
+                        elapsedProp.TryGetDouble(out var elapsedMs))
+                    {
+                        elapsedSeconds = elapsedMs / 1000d;
+                    }
+                }
+                else if (action.TryGetProperty("startDate", out var startProp) &&
+                         startProp.ValueKind != JsonValueKind.Null &&
+                         startProp.ValueKind != JsonValueKind.Undefined)
+                {
+                    status = "🔄 In Progress";
+                    if (startProp.ValueKind == JsonValueKind.String &&
+                        DateTimeOffset.TryParse(startProp.GetString(), out var start))
+                    {
+                        elapsedSeconds = Math.Max(0, (DateTimeOffset.UtcNow - start).TotalSeconds);
+                    }
                 }
             }
-            else if (action.TryGetProperty("startDate", out var startProp) &&
-                     startProp.ValueKind != JsonValueKind.Null &&
-                     startProp.ValueKind != JsonValueKind.Undefined)
-            {
-                status = "🔄 In Progress";
-                if (startProp.ValueKind == JsonValueKind.String &&
-                    DateTimeOffset.TryParse(startProp.GetString(), out var start))
-                {
-                    elapsedSeconds = Math.Max(0, (DateTimeOffset.UtcNow - start).TotalSeconds);
-                }
-            }
-        }
 
-        string durationLabel;
-        if (status == "🔄 In Progress")
-        {
+            string durationLabel;
+            if (status == "🔄 In Progress")
+            {
             // Animated spinner using Unicode Braille characters
-            SpinnerFrame = (SpinnerFrame + 1) % SpinnerChars.Length;
+                SpinnerFrame = (SpinnerFrame + 1) % SpinnerChars.Length;
             durationLabel = SpinnerChars[SpinnerFrame];
-        }
-        else if (elapsedSeconds.HasValue)
-        {
-            durationLabel = FormatDuration(elapsedSeconds.Value);
-        }
-        else
-        {
-            durationLabel = "--";
-        }
+            }
+            else if (elapsedSeconds.HasValue)
+            {
+                durationLabel = FormatDuration(elapsedSeconds.Value);
+            }
+            else
+            {
+                durationLabel = "--";
+            }
 
         return (status, durationLabel);
-    }
+        }
 
     public static void ResetProgressArea()
     {
@@ -205,26 +221,8 @@ public static class CliHelpers
 
         lock (ProgressLock)
         {
-            if (_terminalGuiInitialized && Application.MainLoop != null)
-            {
-                try
-                {
-                    Application.MainLoop.Invoke(() =>
-                    {
-                        if (_progressTextView != null)
-                        {
-                            Application.Top.Remove(_progressTextView);
-                            _progressTextView = null;
-                            Application.Refresh();
-                        }
-                    });
-                }
-                catch
-                {
-                    // Ignore errors during cleanup
-                }
-            }
-            
+            _progressTop = null;
+            _progressHeight = 0;
         }
     }
 
