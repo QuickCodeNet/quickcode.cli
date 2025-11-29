@@ -23,6 +23,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
     <PackageReference Include="System.CommandLine" />
     <PackageReference Include="System.Text.Json" />
+    <PackageReference Include="Terminal.Gui" />
   </ItemGroup>
 
 </Project>

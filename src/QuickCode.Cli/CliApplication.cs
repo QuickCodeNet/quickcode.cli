@@ -1403,7 +1403,8 @@ public sealed class CliApplication
                 if (allActionsCompleted || allStepsCompleted)
                 {
                     CliHelpers.ResetProgressArea();
-                    Console.WriteLine("✅ Generation completed. Exiting watcher...");
+                    CliHelpers.ShowCompletionSummary(evt.AllSteps, evt.AllActions);
+                    Console.WriteLine("Exiting watcher...");
                     cts.Cancel();
                     return;
                 }
@@ -1445,7 +1446,8 @@ public sealed class CliApplication
                                         if (allActionsCompleted || allStepsCompleted)
                                         {
                                             CliHelpers.ResetProgressArea();
-                                            Console.WriteLine("✅ All actions completed (HTTP verification). Exiting watcher...");
+                                            CliHelpers.ShowCompletionSummary(allSteps, allActions);
+                                            Console.WriteLine("Exiting watcher...");
                                             cts.Cancel();
                                             return;
                                         }
@@ -1460,7 +1462,24 @@ public sealed class CliApplication
                             if (status.IsFinished)
                             {
                                 CliHelpers.ResetProgressArea();
-                                Console.WriteLine("✅ Generation completed (HTTP verification). Exiting watcher...");
+                                // Try to get steps data for summary
+                                try
+                                {
+                                    var stepsData = await client.GetGenerationStepsAsync();
+                                    if (stepsData.ValueKind == JsonValueKind.Object)
+                                    {
+                                        if (stepsData.TryGetProperty("allSteps", out var allSteps) &&
+                                            stepsData.TryGetProperty("allActions", out var allActions))
+                                        {
+                                            CliHelpers.ShowCompletionSummary(allSteps, allActions);
+                                        }
+                                    }
+                                }
+                                catch
+                                {
+                                    // If we can't get steps, just show completion message
+                                }
+                                Console.WriteLine("Exiting watcher...");
                                 cts.Cancel();
                             }
                         }
@@ -1552,7 +1571,8 @@ public sealed class CliApplication
                             if (allActionsCompleted || allStepsCompleted)
                             {
                                 CliHelpers.ResetProgressArea();
-                                Console.WriteLine("✅ All actions completed. Exiting watcher...");
+                                CliHelpers.ShowCompletionSummary(allSteps, allActions);
+                                Console.WriteLine("Exiting watcher...");
                                 cts.Cancel();
                                 return;
                             }
@@ -1568,7 +1588,24 @@ public sealed class CliApplication
                 if (response.IsFinished)
                 {
                     CliHelpers.ResetProgressArea();
-                    Console.WriteLine("✅ Generation completed. Exiting watcher...");
+                    // Try to get steps data for summary
+                    try
+                    {
+                        var stepsData = await client.GetGenerationStepsAsync();
+                        if (stepsData.ValueKind == JsonValueKind.Object)
+                        {
+                            if (stepsData.TryGetProperty("allSteps", out var allSteps) &&
+                                stepsData.TryGetProperty("allActions", out var allActions))
+                            {
+                                CliHelpers.ShowCompletionSummary(allSteps, allActions);
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // If we can't get steps, just show completion message
+                    }
+                    Console.WriteLine("Exiting watcher...");
                     cts.Cancel();
                 }
             }, cts.Token);

@@ -1,16 +1,18 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Terminal.Gui;
 
 namespace QuickCode.Cli.Utilities;
 
 public static class CliHelpers
 {
     private static readonly object ProgressLock = new();
-    private static int? ProgressTop;
-    private static int ProgressHeight;
     private static int SpinnerFrame;
-    private static readonly char[] SpinnerChars = { '|', '/', '-', '\\' };
+    private static readonly string[] SpinnerChars = { "→", "↘", "↓", "↙", "←", "↖", "↑", "↗" };
+    private static TextView? _progressTextView;
+    private static bool _terminalGuiInitialized;
+    private static Thread? _terminalGuiThread;
 
     public static string GenerateSessionId()
     {
@@ -25,12 +27,7 @@ public static class CliHelpers
 
     public static void RenderStepProgress(JsonElement allSteps, JsonElement allActions)
     {
-        var lines = new List<string>
-        {
-            new string('=', 60),
-            "Generation Progress",
-            new string('=', 60)
-        };
+        var stepLines = new List<string>();
         
         // Only process steps if allSteps is a valid array
         if (allSteps.ValueKind == JsonValueKind.Array)
@@ -41,24 +38,25 @@ public static class CliHelpers
                 var description = step.TryGetProperty("description", out var descProp)
                     ? descProp.GetString() ?? "Unknown"
                     : "Unknown";
-                lines.Add($"{status} - {description} [{durationLabel}]");
+                stepLines.Add($"{status} - {description} [{durationLabel}]");
             }
         }
         else
         {
             // If no steps available, show a waiting message
-            lines.Add("⏳ Waiting for generation steps...");
+            stepLines.Add("⏳ Waiting for generation steps...");
         }
-        
-        lines.Add(new string('=', 60));
-        lines.Add(string.Empty);
 
         if (Console.IsOutputRedirected)
         {
-            foreach (var line in lines)
+            Console.WriteLine(new string('=', 60));
+            Console.WriteLine("Generation Progress");
+            Console.WriteLine(new string('=', 60));
+            foreach (var line in stepLines)
             {
                 Console.WriteLine(line);
             }
+            Console.WriteLine(new string('=', 60));
             return;
         }
 
@@ -66,107 +64,77 @@ public static class CliHelpers
         {
             try
             {
-                // Initialize progress area position on first render
-                if (!ProgressTop.HasValue)
+                // Initialize Terminal.Gui on first render
+                if (!_terminalGuiInitialized)
                 {
-                    ProgressTop = Console.CursorTop;
-                }
-
-                var startRow = ProgressTop.Value;
-                var bufferWidth = SafeBufferWidth();
-
-                // On Mac, use ANSI escape codes to move cursor up to the progress area
-                // Calculate how many lines we need to move up
-                var currentCursorTop = Console.CursorTop;
-                var linesToMoveUp = currentCursorTop - startRow;
-
-                // If we're not at the start position, move cursor up
-                if (linesToMoveUp > 0)
-                {
-                    // Move cursor up using ANSI escape code
-                    Console.Write($"\x1b[{linesToMoveUp}A");
-                }
-                else if (linesToMoveUp < 0)
-                {
-                    // If we're above the start position, move down
-                    Console.Write($"\x1b[{-linesToMoveUp}B");
-                }
-
-                // Now render each line
-                for (var i = 0; i < lines.Count; i++)
-                {
-                    // Move to beginning of line
-                    Console.Write("\r");
-                    // Clear the entire line
-                    Console.Write("\x1b[K");
-                    // Write the line content (truncate if too long)
-                    var line = lines[i];
-                    if (line.Length > bufferWidth)
+                    _terminalGuiThread = new Thread(() =>
                     {
-                        line = line.Substring(0, bufferWidth);
-                    }
-                    Console.Write(line);
-                    
-                    // If not last line, move to next line
-                    if (i < lines.Count - 1)
-                    {
-                        Console.Write("\n");
-                    }
-                }
-
-                // Clear any remaining lines from previous render
-                if (ProgressHeight > lines.Count)
-                {
-                    for (var i = lines.Count; i < ProgressHeight; i++)
-                    {
-                        Console.Write("\r\x1b[K");
-                        if (i < ProgressHeight - 1)
+                        Application.Init();
+                        _terminalGuiInitialized = true;
+                        
+                        // Create color scheme with black background
+                        var colorScheme = new ColorScheme
                         {
-                            Console.Write("\n");
-                        }
-                    }
+                            Normal = new Terminal.Gui.Attribute(Color.White, Color.Black),
+                            Focus = new Terminal.Gui.Attribute(Color.BrightCyan, Color.Black),
+                            HotNormal = new Terminal.Gui.Attribute(Color.BrightYellow, Color.Black),
+                            HotFocus = new Terminal.Gui.Attribute(Color.BrightYellow, Color.Black),
+                            Disabled = new Terminal.Gui.Attribute(Color.Gray, Color.Black)
+                        };
+                        
+                        // Create TextView for displaying progress with black background (no frame)
+                        _progressTextView = new TextView
+                        {
+                            X = 0,
+                            Y = 0,
+                            Width = Dim.Fill(),
+                            Height = Dim.Fill(),
+                            ReadOnly = true,
+                            WordWrap = false,
+                            ColorScheme = colorScheme
+                        };
+                        
+                        // Add directly to Top without Window frame
+                        Application.Top.Add(_progressTextView);
+                        Application.Refresh();
+                        
+                        // Run event loop
+                        Application.Run();
+                    })
+                    {
+                        IsBackground = true
+                    };
+                    _terminalGuiThread.Start();
+                    
+                    // Wait a bit for Terminal.Gui to initialize
+                    Thread.Sleep(100);
                 }
-
-                // Update height
-                ProgressHeight = lines.Count;
                 
-                // Move cursor to position after progress area
-                // We're already at the last line of progress area, so we're good
+                // Update existing text view
+                if (_progressTextView != null && Application.MainLoop != null)
+                {
+                    Application.MainLoop.Invoke(() =>
+                    {
+                        if (_progressTextView != null)
+                        {
+                            var text = string.Join("\n", stepLines);
+                            _progressTextView.Text = text;
+                            Application.Refresh();
+                        }
+                    });
+                }
             }
             catch
             {
-                // Fallback: if cursor positioning fails, use simple approach
-                try
+                // Fallback: if Terminal.Gui fails, use simple console output
+                Console.WriteLine(new string('=', 60));
+                Console.WriteLine("Generation Progress");
+                Console.WriteLine(new string('=', 60));
+                foreach (var line in stepLines)
                 {
-                    // Try to move cursor to start position using ANSI codes
-                    if (ProgressTop.HasValue)
-                    {
-                        var currentTop = Console.CursorTop;
-                        var diff = currentTop - ProgressTop.Value;
-                        if (diff > 0)
-                        {
-                            Console.Write($"\x1b[{diff}A");
-                        }
-                    }
-
-                    foreach (var line in lines)
-                    {
-                        Console.Write("\r\x1b[K");
-                        Console.WriteLine(line);
-                    }
-
-                    ProgressHeight = lines.Count;
+                    Console.WriteLine(line);
                 }
-                catch
-                {
-                    // Last resort: just write normally
-                    foreach (var line in lines)
-                    {
-                        Console.WriteLine(line);
-                    }
-                    ProgressTop = null;
-                    ProgressHeight = 0;
-                }
+                Console.WriteLine(new string('=', 60));
             }
         }
     }
@@ -212,9 +180,9 @@ public static class CliHelpers
         string durationLabel;
         if (status == "🔄 In Progress")
         {
-            // Animated spinner like Docker
+            // Animated spinner using Unicode Braille characters
             SpinnerFrame = (SpinnerFrame + 1) % SpinnerChars.Length;
-            durationLabel = $"{SpinnerChars[SpinnerFrame]}";
+            durationLabel = SpinnerChars[SpinnerFrame];
         }
         else if (elapsedSeconds.HasValue)
         {
@@ -237,23 +205,79 @@ public static class CliHelpers
 
         lock (ProgressLock)
         {
-            ProgressTop = null;
-            ProgressHeight = 0;
+            if (_terminalGuiInitialized && Application.MainLoop != null)
+            {
+                try
+                {
+                    Application.MainLoop.Invoke(() =>
+                    {
+                        if (_progressTextView != null)
+                        {
+                            Application.Top.Remove(_progressTextView);
+                            _progressTextView = null;
+                            Application.Refresh();
+                        }
+                    });
+                }
+                catch
+                {
+                    // Ignore errors during cleanup
+                }
+            }
+            
+        }
+    }
+
+    public static void ShowCompletionSummary(JsonElement allSteps, JsonElement allActions)
+    {
+        if (allSteps.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        var totalSeconds = 0.0;
+        var completedSteps = 0;
+
+        foreach (var step in allSteps.EnumerateArray())
+        {
+            var actionId = step.TryGetProperty("actionId", out var actionIdProp)
+                ? actionIdProp.GetInt32()
+                : 0;
+
+            var action = allActions.ValueKind == JsonValueKind.Array
+                ? allActions.EnumerateArray().FirstOrDefault(a =>
+                    a.TryGetProperty("id", out var idProp) && idProp.GetInt32() == actionId)
+                : default;
+
+            if (action.ValueKind != JsonValueKind.Undefined)
+            {
+                if (action.TryGetProperty("isCompleted", out var completedProp) && completedProp.GetBoolean())
+                {
+                    completedSteps++;
+                    if (action.TryGetProperty("elapsedTime", out var elapsedProp) &&
+                        elapsedProp.TryGetDouble(out var elapsedMs))
+                    {
+                        totalSeconds += elapsedMs / 1000d;
+                    }
+                }
+            }
+        }
+
+        if (completedSteps > 0)
+        {
+            var totalDuration = FormatDuration(totalSeconds);
+            Console.WriteLine();
+            Console.WriteLine(new string('=', 60));
+            Console.WriteLine($"✅ Generation completed successfully!");
+            Console.WriteLine($"   Total steps: {completedSteps}");
+            Console.WriteLine($"   Total duration: {totalDuration}");
+            Console.WriteLine(new string('=', 60));
         }
     }
 
     public static void ReleaseProgressArea()
     {
-        if (Console.IsOutputRedirected)
-        {
-            return;
-        }
-
-        lock (ProgressLock)
-        {
-            ProgressTop = null;
-            ProgressHeight = 0;
-        }
+        ResetProgressArea();
     }
 
     public static void RenderModuleList(JsonElement modules)
