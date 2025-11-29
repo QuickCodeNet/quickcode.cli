@@ -19,7 +19,38 @@ public sealed class CliApplication
     public Task<int> RunAsync(string[] args)
     {
         var root = BuildRootCommand();
+        
+        // Handle "quickcode <project> pull/push" format by rearranging args
+        if (args.Length >= 2)
+        {
+            var firstArg = args[0];
+            var secondArg = args[1];
+            
+            // If first arg is not a known command and second is "pull" or "push", rearrange
+            if ((secondArg == "pull" || secondArg == "push") && 
+                !IsKnownCommand(firstArg))
+            {
+                // Rearrange: "demo pull" -> "pull demo"
+                var rearrangedArgs = new string[args.Length];
+                rearrangedArgs[0] = secondArg;
+                rearrangedArgs[1] = firstArg;
+                Array.Copy(args, 2, rearrangedArgs, 2, args.Length - 2);
+                return root.InvokeAsync(rearrangedArgs);
+            }
+        }
+        
         return root.InvokeAsync(args);
+    }
+    
+    private static bool IsKnownCommand(string arg)
+    {
+        var knownCommands = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "config", "project", "module", "create", "check",
+            "forgot-secret", "verify-secret", "get-dbmls", "update-dbmls",
+            "validate", "remove", "templates", "generate", "status", "help", "--help", "-h", "-?"
+        };
+        return knownCommands.Contains(arg);
     }
 
     private RootCommand BuildRootCommand()
