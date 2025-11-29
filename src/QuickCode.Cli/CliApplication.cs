@@ -892,7 +892,7 @@ public sealed class CliApplication
                         Console.Write($"⬇️  Downloading template {templateName}... ");
                         var dbml = await client.GetModuleDbmlAsync(name, templateName, templateKey, resolvedEmail, resolvedSecret);
 
-                        var fileName = $"{templateName}.dbml";
+                        var fileName = $"{templateKey}.dbml";
                         var templatesFilePath = Path.Combine(templatesDir, fileName);
 
                         await File.WriteAllTextAsync(templatesFilePath, dbml);
