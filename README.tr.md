@@ -95,6 +95,12 @@ quickcode templates
 
 # 5. Generate + watch
 quickcode demo generate --watch
+
+# 6. Demo projesini GitHub'dan indir veya güncelle
+quickcode demo pull
+
+# 7. Demo projesindeki değişiklikleri GitHub'a push et
+quickcode demo push
 ```
 
 ### B Seçeneği – Geliştirme modu (kaynak koddan)
@@ -129,6 +135,12 @@ dotnet run --project src/QuickCode.Cli -- templates
 
 # 5. Generate + watch
 dotnet run --project src/QuickCode.Cli -- demo generate --watch
+
+# 6. Demo projesini GitHub'dan indir veya güncelle
+dotnet run --project src/QuickCode.Cli -- demo pull
+
+# 7. Demo projesindeki değişiklikleri GitHub'a push et
+dotnet run --project src/QuickCode.Cli -- demo push
 ```
 
 ---
@@ -160,6 +172,8 @@ dotnet run --project src/QuickCode.Cli -- demo generate --watch
 | `module available/list/...` | Modül yönetimi | `quickcode module list --project demo` |
 | `generate [--watch]` | Generate başlat ve istersen izle | `quickcode generate demo --watch` |
 | `status --session-id` | Session ID ile durumu sorgula | `quickcode status --session-id <id>` |
+| `demo pull` | Demo projesini GitHub'dan indir veya güncelle | `quickcode demo pull` |
+| `demo push` | Demo projesindeki değişiklikleri GitHub'a push et | `quickcode demo push` |
 
 ---
 

@@ -96,6 +96,12 @@ quickcode templates
 
 # 5. Generate and watch
 quickcode demo generate --watch
+
+# 6. Clone or pull demo project from GitHub
+quickcode demo pull
+
+# 7. Push changes to demo project on GitHub
+quickcode demo push
 ```
 
 ### Option B – Development mode (from source)
@@ -130,6 +136,12 @@ dotnet run --project src/QuickCode.Cli -- templates
 
 # 5. Generate and watch
 dotnet run --project src/QuickCode.Cli -- demo generate --watch
+
+# 6. Clone or pull demo project from GitHub
+dotnet run --project src/QuickCode.Cli -- demo pull
+
+# 7. Push changes to demo project on GitHub
+dotnet run --project src/QuickCode.Cli -- demo push
 ```
 
 ---
@@ -163,6 +175,8 @@ dotnet run --project src/QuickCode.Cli -- demo generate --watch
 | `module list/add/remove/get-dbml/save-dbml` | Manage project modules | `quickcode module list --project demo` |
 | `generate [--watch]` | Trigger generation and optionally stream progress | `quickcode generate demo --watch` |
 | `status --session-id` | Query generation status once | `quickcode status --session-id <id>` |
+| `demo pull` | Clone or pull the demo project from GitHub | `quickcode demo pull` |
+| `demo push` | Push changes to the demo project on GitHub | `quickcode demo push` |
 
 ---
 

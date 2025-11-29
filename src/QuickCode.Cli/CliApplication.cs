@@ -31,6 +31,7 @@ public sealed class CliApplication
         root.AddCommand(BuildConfigCommand(verboseOption));
         root.AddCommand(BuildProjectCommand(verboseOption));
         root.AddCommand(BuildModuleCommand(verboseOption));
+        root.AddCommand(BuildDemoCommand(verboseOption));
         root.AddCommand(BuildCreateRootCommand(verboseOption));
         root.AddCommand(BuildCheckRootCommand(verboseOption));
         root.AddCommand(BuildForgotSecretRootCommand(verboseOption));
@@ -675,6 +676,192 @@ public sealed class CliApplication
         }, projectArg, emailOption, secretOption, sessionOption, watchOption, verboseOption);
 
         return command;
+    }
+
+    private Command BuildDemoCommand(Option<bool> verboseOption)
+    {
+        var demoCommand = new Command(
+            "demo",
+            """
+            Manage demo project.
+            
+            Subcommands:
+              pull          Clone or pull the demo project from GitHub.
+              push          Push changes to the demo project on GitHub.
+            """);
+
+        var pullCommand = new Command("pull", "Clone or pull the demo project from GitHub repository.");
+        pullCommand.SetHandler(async (bool verbose) =>
+        {
+            await HandleDemoPullAsync(verbose);
+        }, verboseOption);
+
+        var pushCommand = new Command("push", "Push changes to the demo project on GitHub.");
+        pushCommand.SetHandler(async (bool verbose) =>
+        {
+            await HandleDemoPushAsync(verbose);
+        }, verboseOption);
+
+        demoCommand.AddCommand(pullCommand);
+        demoCommand.AddCommand(pushCommand);
+        return demoCommand;
+    }
+
+    private async Task HandleDemoPullAsync(bool verbose)
+    {
+        const string projectName = "demo";
+        const string repoUrl = "https://github.com/QuickCodeNet/demo.git";
+        var currentDir = Directory.GetCurrentDirectory();
+        var projectDir = Path.Combine(currentDir, projectName);
+        var targetDir = Path.Combine(projectDir, projectName);
+        var gitDir = Path.Combine(targetDir, ".git");
+
+        try
+        {
+            // Ensure project directory exists
+            if (!Directory.Exists(projectDir))
+            {
+                Directory.CreateDirectory(projectDir);
+            }
+
+            // Check if directory exists and is a git repository
+            if (Directory.Exists(targetDir) && Directory.Exists(gitDir))
+            {
+                // Directory exists and is a git repository, try to pull
+                Console.WriteLine($"📦 Pulling latest changes for '{projectName}'...");
+                var pullResult = await RunGitCommandAsync(targetDir, "pull", verbose);
+                if (pullResult.Success)
+                {
+                    Console.WriteLine($"✅ Successfully pulled latest changes for '{projectName}'.");
+                }
+                else
+                {
+                    Console.WriteLine($"⚠️ Git pull failed: {pullResult.Error}");
+                    Console.WriteLine($"💡 You may need to resolve conflicts or check the repository status.");
+                }
+            }
+            else
+            {
+                // Directory doesn't exist or is not a git repository, clone it
+                if (Directory.Exists(targetDir))
+                {
+                    Console.WriteLine($"⚠️ Directory '{targetDir}' exists but is not a git repository.");
+                    Console.WriteLine($"📦 Cloning '{projectName}' from GitHub...");
+                }
+                else
+                {
+                    Console.WriteLine($"📦 Cloning '{projectName}' from GitHub...");
+                }
+                
+                var cloneResult = await RunGitCommandAsync(projectDir, $"clone {repoUrl} {projectName}", verbose);
+                if (cloneResult.Success)
+                {
+                    Console.WriteLine($"✅ Successfully cloned '{projectName}' to '{targetDir}'.");
+                }
+                else
+                {
+                    Console.WriteLine($"❌ Failed to clone '{projectName}': {cloneResult.Error}");
+                    Console.WriteLine($"💡 Make sure Git is installed and you have access to the repository.");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error: {ex.Message}");
+            if (verbose)
+            {
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
+        }
+    }
+
+    private async Task HandleDemoPushAsync(bool verbose)
+    {
+        const string projectName = "demo";
+        var currentDir = Directory.GetCurrentDirectory();
+        var projectDir = Path.Combine(currentDir, projectName);
+        var targetDir = Path.Combine(projectDir, projectName);
+
+        try
+        {
+            if (!Directory.Exists(targetDir))
+            {
+                Console.WriteLine($"❌ '{projectName}' directory not found.");
+                Console.WriteLine($"💡 Run 'quickcode demo pull' first to clone the repository.");
+                return;
+            }
+
+            // Check if it's a git repository
+            var gitDir = Path.Combine(targetDir, ".git");
+            if (!Directory.Exists(gitDir))
+            {
+                Console.WriteLine($"❌ '{targetDir}' is not a git repository.");
+                return;
+            }
+
+            Console.WriteLine($"📤 Pushing changes for '{projectName}'...");
+            var pushResult = await RunGitCommandAsync(targetDir, "push", verbose);
+            if (pushResult.Success)
+            {
+                Console.WriteLine($"✅ Successfully pushed changes for '{projectName}'.");
+            }
+            else
+            {
+                Console.WriteLine($"⚠️ Git push failed: {pushResult.Error}");
+                Console.WriteLine($"💡 Make sure you have committed your changes and have push permissions.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error: {ex.Message}");
+            if (verbose)
+            {
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
+        }
+    }
+
+    private async Task<(bool Success, string? Error)> RunGitCommandAsync(string workingDirectory, string arguments, bool verbose)
+    {
+        try
+        {
+            var startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "git",
+                Arguments = arguments,
+                WorkingDirectory = workingDirectory,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = System.Diagnostics.Process.Start(startInfo);
+            if (process == null)
+            {
+                return (false, "Failed to start git process.");
+            }
+
+            var output = await process.StandardOutput.ReadToEndAsync();
+            var error = await process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+
+            if (verbose && !string.IsNullOrWhiteSpace(output))
+            {
+                Console.WriteLine(output);
+            }
+
+            if (process.ExitCode != 0)
+            {
+                return (false, string.IsNullOrWhiteSpace(error) ? output : error);
+            }
+
+            return (true, null);
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message);
+        }
     }
 
     private Command BuildStatusCommand(Option<bool> verboseOption)

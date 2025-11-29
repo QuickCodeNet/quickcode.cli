@@ -50,6 +50,16 @@
       "commandLineArgs": "demo modules",
       "workingDirectory": "$(ProjectDir)/../../projects"
     },
+    "demo pull": {
+      "commandName": "Project",
+      "commandLineArgs": "demo pull",
+      "workingDirectory": "$(ProjectDir)/../../projects"
+    },
+    "demo push": {
+      "commandName": "Project",
+      "commandLineArgs": "demo push",
+      "workingDirectory": "$(ProjectDir)/../../projects"
+    },
     "templates": {
       "commandName": "Project",
       "commandLineArgs": "templates",
