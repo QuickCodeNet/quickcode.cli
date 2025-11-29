@@ -31,7 +31,8 @@ public sealed class CliApplication
         root.AddCommand(BuildConfigCommand(verboseOption));
         root.AddCommand(BuildProjectCommand(verboseOption));
         root.AddCommand(BuildModuleCommand(verboseOption));
-        root.AddCommand(BuildDemoCommand(verboseOption));
+        root.AddCommand(BuildPullCommand(verboseOption));
+        root.AddCommand(BuildPushCommand(verboseOption));
         root.AddCommand(BuildCreateRootCommand(verboseOption));
         root.AddCommand(BuildCheckRootCommand(verboseOption));
         root.AddCommand(BuildForgotSecretRootCommand(verboseOption));
@@ -678,41 +679,50 @@ public sealed class CliApplication
         return command;
     }
 
-    private Command BuildDemoCommand(Option<bool> verboseOption)
+    private Command BuildPullCommand(Option<bool> verboseOption)
     {
-        var demoCommand = new Command(
-            "demo",
-            """
-            Manage demo project.
-            
-            Subcommands:
-              pull          Clone or pull the demo project from GitHub.
-              push          Push changes to the demo project on GitHub.
-            """);
-
-        var pullCommand = new Command("pull", "Clone or pull the demo project from GitHub repository.");
-        pullCommand.SetHandler(async (bool verbose) =>
+        var projectArg = new Argument<string>("project", "Project name.");
+        var command = new Command("pull", "Clone or pull the project from GitHub repository.")
         {
-            await HandleDemoPullAsync(verbose);
-        }, verboseOption);
+            projectArg
+        };
 
-        var pushCommand = new Command("push", "Push changes to the demo project on GitHub.");
-        pushCommand.SetHandler(async (bool verbose) =>
+        command.SetHandler(async (string project, bool verbose) =>
         {
-            await HandleDemoPushAsync(verbose);
-        }, verboseOption);
+            await HandlePullAsync(project, verbose);
+        }, projectArg, verboseOption);
 
-        demoCommand.AddCommand(pullCommand);
-        demoCommand.AddCommand(pushCommand);
-        return demoCommand;
+        return command;
     }
 
-    private async Task HandleDemoPullAsync(bool verbose)
+    private Command BuildPushCommand(Option<bool> verboseOption)
     {
-        const string projectName = "demo";
-        const string repoUrl = "https://github.com/QuickCodeNet/demo.git";
+        var projectArg = new Argument<string>("project", "Project name.");
+        var command = new Command("push", "Push changes to the project on GitHub.")
+        {
+            projectArg
+        };
+
+        command.SetHandler(async (string project, bool verbose) =>
+        {
+            await HandlePushAsync(project, verbose);
+        }, projectArg, verboseOption);
+
+        return command;
+    }
+
+    private async Task HandlePullAsync(string projectName, bool verbose)
+    {
+        var repoUrl = $"https://github.com/QuickCodeNet/{projectName}.git";
         var currentDir = Directory.GetCurrentDirectory();
-        var projectDir = Path.Combine(currentDir, projectName);
+        var currentDirName = new DirectoryInfo(currentDir).Name;
+        
+        // If we're already in the project directory, use current directory as projectDir
+        // Otherwise, create projectName subdirectory
+        var projectDir = string.Equals(currentDirName, projectName, StringComparison.OrdinalIgnoreCase)
+            ? currentDir
+            : Path.Combine(currentDir, projectName);
+        
         var targetDir = Path.Combine(projectDir, projectName);
         var gitDir = Path.Combine(targetDir, ".git");
 
@@ -775,11 +785,17 @@ public sealed class CliApplication
         }
     }
 
-    private async Task HandleDemoPushAsync(bool verbose)
+    private async Task HandlePushAsync(string projectName, bool verbose)
     {
-        const string projectName = "demo";
         var currentDir = Directory.GetCurrentDirectory();
-        var projectDir = Path.Combine(currentDir, projectName);
+        var currentDirName = new DirectoryInfo(currentDir).Name;
+        
+        // If we're already in the project directory, use current directory as projectDir
+        // Otherwise, use projectName subdirectory
+        var projectDir = string.Equals(currentDirName, projectName, StringComparison.OrdinalIgnoreCase)
+            ? currentDir
+            : Path.Combine(currentDir, projectName);
+        
         var targetDir = Path.Combine(projectDir, projectName);
 
         try
@@ -825,6 +841,13 @@ public sealed class CliApplication
     {
         try
         {
+            // Check if git is available
+            var gitCheck = await CheckGitInstalledAsync();
+            if (!gitCheck.Installed)
+            {
+                return (false, $"Git is not installed or not found in PATH. {gitCheck.Error}");
+            }
+
             var startInfo = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = "git",
@@ -839,7 +862,7 @@ public sealed class CliApplication
             using var process = System.Diagnostics.Process.Start(startInfo);
             if (process == null)
             {
-                return (false, "Failed to start git process.");
+                return (false, "Failed to start git process. Git may not be installed.");
             }
 
             var output = await process.StandardOutput.ReadToEndAsync();
@@ -857,6 +880,43 @@ public sealed class CliApplication
             }
 
             return (true, null);
+        }
+        catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 2)
+        {
+            return (false, "Git is not installed or not found in PATH. Please install Git from https://git-scm.com/");
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message);
+        }
+    }
+
+    private async Task<(bool Installed, string? Error)> CheckGitInstalledAsync()
+    {
+        try
+        {
+            var startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "git",
+                Arguments = "--version",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = System.Diagnostics.Process.Start(startInfo);
+            if (process == null)
+            {
+                return (false, "Failed to check git installation.");
+            }
+
+            await process.WaitForExitAsync();
+            return (process.ExitCode == 0, null);
+        }
+        catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 2)
+        {
+            return (false, "Git is not installed or not found in PATH. Please install Git from https://git-scm.com/");
         }
         catch (Exception ex)
         {
