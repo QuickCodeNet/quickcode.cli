@@ -1,5 +1,6 @@
 #nullable enable
 using System.CommandLine;
+using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
 using System.Net.Http;
 using System.Reflection;
@@ -512,11 +513,21 @@ public sealed class CliApplication
 
         command.SetHandler(async (string? projectName, bool verbose) =>
         {
-            var config = _configService.Load();
-            var (name, _, _) = _configService.ResolveProjectCredentials(config, projectName, null, null);
-            using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-            var modules = await client.GetProjectModulesAsync(name);
-            CliHelpers.RenderModuleList(modules);
+            try
+            {
+                var config = _configService.Load();
+                var (name, _, _) = _configService.ResolveProjectCredentials(config, projectName, null, null);
+                using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
+                var modules = await client.GetProjectModulesAsync(name);
+                CliHelpers.RenderModuleList(modules);
+            }
+            catch (InvalidOperationException ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine(ex.Message);
+                Console.ResetColor();
+                Environment.Exit(1);
+            }
         }, projectOption, verboseOption);
 
         return command;
