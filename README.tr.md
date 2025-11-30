@@ -17,7 +17,7 @@ QuickCode.Cli, QuickCode web arayüzündeki tüm akışı terminale taşıyan .N
 
 ### macOS (Homebrew) - Önerilen
 ```bash
-brew tap uzeyirapaydin/quickcode-cli
+brew tap QuickCodeNet/quickcode-cli
 brew install quickcode-cli
 ```
 

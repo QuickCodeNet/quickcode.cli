@@ -17,7 +17,7 @@ QuickCode.Cli is a .NET 10 console application that mirrors the QuickCode web UI
 
 ### macOS (Homebrew) - Recommended
 ```bash
-brew tap uzeyirapaydin/quickcode-cli
+brew tap QuickCodeNet/quickcode-cli
 brew install quickcode-cli
 ```
 
