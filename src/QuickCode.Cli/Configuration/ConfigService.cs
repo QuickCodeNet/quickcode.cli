@@ -194,7 +194,10 @@ public sealed class ConfigService
     {
         if (string.IsNullOrWhiteSpace(projectName))
         {
-            throw new InvalidOperationException("Project name is required. Pass --project <name>.");
+            throw new InvalidOperationException(
+                "❌ Project name is required.\n" +
+                "   Use: quickcode <command> <project-name> [options]\n" +
+                "   Or: quickcode <command> --project <project-name> [options]");
         }
 
         var projectConfig = config.Projects.TryGetValue(projectName, out var pConfig)
@@ -204,13 +207,19 @@ public sealed class ConfigService
         var resolvedEmail = email ?? projectConfig?.Email;
         if (string.IsNullOrWhiteSpace(resolvedEmail))
         {
-            throw new InvalidOperationException("Project email is required. Pass --email or set it via 'config --project <name> --set email=...'.");
+            throw new InvalidOperationException(
+                $"❌ Project email is required for '{projectName}'.\n" +
+                $"   Configure it with: quickcode config --project {projectName} --set email=your@email.com\n" +
+                $"   Or pass it directly: quickcode <command> {projectName} --email your@email.com");
         }
 
         var encryptedSecret = secret ?? projectConfig?.SecretCode;
         if (string.IsNullOrWhiteSpace(encryptedSecret))
         {
-            throw new InvalidOperationException("Project secret code is required. Pass --secret-code or set it via 'config --project <name> --set secret_code=...'.");
+            throw new InvalidOperationException(
+                $"❌ Project secret code is required for '{projectName}'.\n" +
+                $"   Configure it with: quickcode config --project {projectName} --set secret_code=YOUR_SECRET\n" +
+                $"   Or pass it directly: quickcode <command> {projectName} --secret-code YOUR_SECRET");
         }
 
         // Decrypt secret code if it's encrypted, otherwise use as-is (backward compatibility)
