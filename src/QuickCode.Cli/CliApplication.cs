@@ -529,8 +529,8 @@ public sealed class CliApplication
         var emailOption = new Option<string?>("--email");
         var secretOption = new Option<string?>("--secret-code");
         var moduleNameOption = new Option<string>("--module-name") { IsRequired = true };
-        var templateOption = new Option<string>("--template-key") { IsRequired = true };
-        var dbTypeOption = new Option<string>("--db-type", () => "MsSql");
+        var templateOption = new Option<string>("--template-key", () => "Empty");
+        var dbTypeOption = new Option<string>("--db-type", () => "mssql");
         var patternOption = new Option<string>("--pattern", () => "Service");
 
         command.AddOption(projectOption);
@@ -544,11 +544,65 @@ public sealed class CliApplication
         command.SetHandler(async (string? projectName, string? email, string? secret, string moduleName,
             string templateKey, string dbType, string pattern, bool verbose) =>
         {
+            // Validate db-type value
+            var validDbTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "mssql", "mysql", "postgresql" };
+            if (!validDbTypes.Contains(dbType))
+            {
+                Console.WriteLine($"❌ Invalid db-type value: {dbType}");
+                Console.WriteLine($"Valid values: mssql, mysql, postgresql");
+                return;
+            }
+            
+            // Validate pattern value
+            var validPatterns = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Service", "CqrsAndMediator" };
+            if (!validPatterns.Contains(pattern))
+            {
+                Console.WriteLine($"❌ Invalid pattern value: {pattern}");
+                Console.WriteLine($"Valid values: Service, CqrsAndMediator");
+                return;
+            }
+            
             var config = _configService.Load();
             var (name, resolvedEmail, resolvedSecret) = _configService.ResolveProjectCredentials(config, projectName, email, secret);
             using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
+            
             var result = await client.AddProjectModuleAsync(name, resolvedEmail, resolvedSecret, moduleName, templateKey, dbType, pattern);
-            Console.WriteLine(result ? "✅ Module added." : "⚠️ Module add failed.");
+            if (!result)
+            {
+                Console.WriteLine("⚠️ Module add failed.");
+                return;
+            }
+            
+            Console.WriteLine("✅ Module added.");
+            
+            // Download and save the module DBML locally
+            try
+            {
+                Console.Write($"⬇️  Downloading DBML for {moduleName}... ");
+                var dbml = await client.GetModuleDbmlAsync(name, moduleName, templateKey, resolvedEmail, resolvedSecret);
+                
+                var currentDir = Directory.GetCurrentDirectory();
+                var currentDirName = new DirectoryInfo(currentDir).Name;
+                var projectDir = string.Equals(currentDirName, name, StringComparison.OrdinalIgnoreCase)
+                    ? currentDir
+                    : Path.Combine(currentDir, name);
+                
+                if (!Directory.Exists(projectDir))
+                {
+                    Directory.CreateDirectory(projectDir);
+                }
+                
+                var fileName = $"{moduleName}.dbml";
+                var projectFilePath = Path.Combine(projectDir, fileName);
+                
+                await File.WriteAllTextAsync(projectFilePath, dbml);
+                Console.WriteLine($"✅ Saved to {projectFilePath}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ Failed to download DBML: {ex.Message}");
+                Console.WriteLine("💡 You can download it later using 'quickcode get-dbmls' or 'quickcode module get-dbml'");
+            }
         }, projectOption, emailOption, secretOption, moduleNameOption, templateOption, dbTypeOption, patternOption, verboseOption);
 
         return command;
@@ -626,7 +680,7 @@ public sealed class CliApplication
         var templateOption = new Option<string>("--template-key") { IsRequired = true };
         var fileOption = new Option<FileInfo?>("--file", "Path to DBML file.");
         var dbmlOption = new Option<string?>("--dbml", "Inline DBML content.");
-        var dbTypeOption = new Option<string>("--db-type", () => "MsSql");
+        var dbTypeOption = new Option<string>("--db-type", () => "mssql");
 
         command.AddOption(projectOption);
         command.AddOption(emailOption);
@@ -646,7 +700,7 @@ public sealed class CliApplication
             var templateKey = ctx.ParseResult.GetValueForOption(templateOption)!;
             var file = ctx.ParseResult.GetValueForOption(fileOption);
             var dbmlInline = ctx.ParseResult.GetValueForOption(dbmlOption);
-            var dbType = ctx.ParseResult.GetValueForOption(dbTypeOption) ?? "MsSql";
+            var dbType = ctx.ParseResult.GetValueForOption(dbTypeOption) ?? "mssql";
             var verbose = ctx.ParseResult.GetValueForOption(verboseOption);
 
             var config = _configService.Load();

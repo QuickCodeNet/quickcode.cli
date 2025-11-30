@@ -92,6 +92,15 @@ Running `quickcode demo get-dbmls` also places the latest `README.md` in the sam
 
 # 4. Module listing / editing (examples)
 quickcode demo modules
+# Add module (all parameters except --module-name are optional with defaults)
+quickcode demo modules add --module-name MyModule
+# Or with all parameters explicitly:
+quickcode demo modules add --module-name MyModule --template-key UserManager --db-type mssql --pattern Service
+# Default values: --template-key=Empty, --db-type=mssql, --pattern=Service
+# Valid db-type values: mssql, mysql, postgresql
+# Valid pattern values: Service, CqrsAndMediator
+# Note: Adding a module automatically downloads and saves the template DBML locally
+quickcode demo modules remove --module-name MyModule
 quickcode templates
 
 # 5. Generate and watch
@@ -132,6 +141,15 @@ dotnet run --project src/QuickCode.Cli -- demo validate
 
 # 4. Module listing / editing (examples)
 dotnet run --project src/QuickCode.Cli -- demo modules
+# Add module (all parameters except --module-name are optional with defaults)
+dotnet run --project src/QuickCode.Cli -- demo modules add --module-name MyModule
+# Or with all parameters explicitly:
+dotnet run --project src/QuickCode.Cli -- demo modules add --module-name MyModule --template-key UserManager --db-type mssql --pattern Service
+# Default values: --template-key=Empty, --db-type=mssql, --pattern=Service
+# Valid db-type values: mssql, mysql, postgresql
+# Valid pattern values: Service, CqrsAndMediator
+# Note: Adding a module automatically downloads and saves the template DBML locally
+dotnet run --project src/QuickCode.Cli -- demo modules remove --module-name MyModule
 dotnet run --project src/QuickCode.Cli -- templates
 
 # 5. Generate and watch

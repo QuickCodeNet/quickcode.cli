@@ -51,9 +51,27 @@ internal static class ArgumentNormalizer
             if (!potentialProject.StartsWith("-", StringComparison.Ordinal) &&
                 potentialVerb.Equals("modules", StringComparison.OrdinalIgnoreCase))
             {
-                var normalized = new List<string> { "module", "list", "--project", potentialProject };
-                normalized.AddRange(args.Skip(2));
-                return normalized.ToArray();
+                // Handle "demo modules", "demo modules add", "demo modules remove"
+                if (args.Length >= 3)
+                {
+                    var subCommand = args[2];
+                    if (subCommand.Equals("add", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var normalized = new List<string> { "module", "add", "--project", potentialProject };
+                        normalized.AddRange(args.Skip(3));
+                        return normalized.ToArray();
+                    }
+                    if (subCommand.Equals("remove", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var normalized = new List<string> { "module", "remove", "--project", potentialProject };
+                        normalized.AddRange(args.Skip(3));
+                        return normalized.ToArray();
+                    }
+                }
+                // Default: "demo modules" -> "module list --project demo"
+                var normalizedList = new List<string> { "module", "list", "--project", potentialProject };
+                normalizedList.AddRange(args.Skip(2));
+                return normalizedList.ToArray();
             }
 
             if (!potentialProject.StartsWith("-", StringComparison.Ordinal) &&

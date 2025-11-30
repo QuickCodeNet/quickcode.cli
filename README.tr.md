@@ -91,6 +91,15 @@ quickcode demo remove
 
 # 4. Modül örnekleri
 quickcode demo modules
+# Modül ekle (--module-name dışındaki tüm parametreler opsiyonel, varsayılan değerlere sahip)
+quickcode demo modules add --module-name MyModule
+# Veya tüm parametrelerle açıkça:
+quickcode demo modules add --module-name MyModule --template-key UserManager --db-type mssql --pattern Service
+# Varsayılan değerler: --template-key=Empty, --db-type=mssql, --pattern=Service
+# Geçerli db-type değerleri: mssql, mysql, postgresql
+# Geçerli pattern değerleri: Service, CqrsAndMediator
+# Not: Modül eklerken template DBML'i otomatik olarak local'e indirilir ve kaydedilir
+quickcode demo modules remove --module-name MyModule
 quickcode templates
 
 # 5. Generate + watch
@@ -131,6 +140,15 @@ dotnet run --project src/QuickCode.Cli -- demo validate
 
 # 4. Modül örnekleri
 dotnet run --project src/QuickCode.Cli -- demo modules
+# Modül ekle (--module-name dışındaki tüm parametreler opsiyonel, varsayılan değerlere sahip)
+dotnet run --project src/QuickCode.Cli -- demo modules add --module-name MyModule
+# Veya tüm parametrelerle açıkça:
+dotnet run --project src/QuickCode.Cli -- demo modules add --module-name MyModule --template-key UserManager --db-type mssql --pattern Service
+# Varsayılan değerler: --template-key=Empty, --db-type=mssql, --pattern=Service
+# Geçerli db-type değerleri: mssql, mysql, postgresql
+# Geçerli pattern değerleri: Service, CqrsAndMediator
+# Not: Modül eklerken template DBML'i otomatik olarak local'e indirilir ve kaydedilir
+dotnet run --project src/QuickCode.Cli -- demo modules remove --module-name MyModule
 dotnet run --project src/QuickCode.Cli -- templates
 
 # 5. Generate + watch
