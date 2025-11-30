@@ -727,7 +727,7 @@ public sealed class CliApplication
 
     private Command BuildGenerateCommand(Option<bool> verboseOption)
     {
-        var command = new Command("generate", "Trigger project generation");
+        var command = new Command("generate", "Trigger project code generation and optionally watch the progress. Starts the generation process on the server and can monitor the progress in real-time.");
         var projectArg = new Argument<string?>("project", "Project name (optional if default configured).");
         var emailOption = new Option<string?>("--email", "Override project email.");
         var secretOption = new Option<string?>("--secret-code", "Override secret code.");

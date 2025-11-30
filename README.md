@@ -104,7 +104,10 @@ quickcode demo modules remove --module-name MyModule
 quickcode templates
 
 # 5. Generate and watch
-quickcode demo generate --watch
+# Trigger code generation for the project. By default, watches the progress in real-time.
+quickcode demo generate
+# Or disable watching:
+quickcode demo generate --watch false
 
 # 6. Clone or pull project from GitHub
 quickcode demo pull
@@ -153,7 +156,10 @@ dotnet run --project src/QuickCode.Cli -- demo modules remove --module-name MyMo
 dotnet run --project src/QuickCode.Cli -- templates
 
 # 5. Generate and watch
-dotnet run --project src/QuickCode.Cli -- demo generate --watch
+# Trigger code generation for the project. By default, watches the progress in real-time.
+dotnet run --project src/QuickCode.Cli -- demo generate
+# Or disable watching:
+dotnet run --project src/QuickCode.Cli -- demo generate --watch false
 
 # 6. Clone or pull demo project from GitHub
 dotnet run --project src/QuickCode.Cli -- demo pull

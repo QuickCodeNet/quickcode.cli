@@ -103,7 +103,10 @@ quickcode demo modules remove --module-name MyModule
 quickcode templates
 
 # 5. Generate + watch
-quickcode demo generate --watch
+# Proje için kod üretimini başlatır. Varsayılan olarak ilerlemeyi gerçek zamanlı izler.
+quickcode demo generate
+# Veya izlemeyi devre dışı bırak:
+quickcode demo generate --watch false
 
 # 6. Projeyi GitHub'dan indir veya güncelle
 quickcode demo pull
@@ -152,7 +155,10 @@ dotnet run --project src/QuickCode.Cli -- demo modules remove --module-name MyMo
 dotnet run --project src/QuickCode.Cli -- templates
 
 # 5. Generate + watch
-dotnet run --project src/QuickCode.Cli -- demo generate --watch
+# Proje için kod üretimini başlatır. Varsayılan olarak ilerlemeyi gerçek zamanlı izler.
+dotnet run --project src/QuickCode.Cli -- demo generate
+# Veya izlemeyi devre dışı bırak:
+dotnet run --project src/QuickCode.Cli -- demo generate --watch false
 
 # 6. Demo projesini GitHub'dan indir veya güncelle
 dotnet run --project src/QuickCode.Cli -- demo pull
