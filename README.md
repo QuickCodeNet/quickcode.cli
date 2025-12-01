@@ -69,30 +69,24 @@ You can run the CLI either from the repository root (recommended) or from inside
 # 1. CLI help
 quickcode --help
 
-# 2. Store project credentials
-quickcode demo config --set email=demo@quickcode.net
+# 2. Check if project exists
+quickcode demo check
+
+# 3. Create project (if it doesn't exist)
+quickcode demo create --email demo@quickcode.net
+# Note: The email is automatically saved to local config after creation.
+
+# 4. Store project secret_code (check your email for the secret code)
 quickcode demo config --set secret_code=SECRET123
 
-# 2a. Validate configuration
+# 5. Validate configuration
 quickcode config validate
 quickcode demo validate
 
-# 3. Project operations (project-first syntax)
-quickcode demo create --email demo@quickcode.net
-quickcode demo check
-quickcode demo forgot-secret [--email demo@quickcode.net]
-quickcode demo verify-secret [--email demo@quickcode.net --secret-code SECRET123]
-quickcode demo get-dbmls
-quickcode demo update-dbmls
-quickcode demo validate
-quickcode demo remove
-
-Running `quickcode demo get-dbmls` also places the latest `README.md` in the same folder so the command reference is always available offline.
-
-
-# 4. Module listing / editing (examples)
+# 6. List modules in the project
 quickcode demo modules
-# Add module (all parameters except --module-name are optional with defaults)
+
+# 7. Add a new module (all parameters except --module-name are optional with defaults)
 quickcode demo modules add --module-name MyModule
 # Or with all parameters explicitly:
 quickcode demo modules add --module-name MyModule --template-key UserManager --db-type mssql --pattern Service
@@ -100,19 +94,33 @@ quickcode demo modules add --module-name MyModule --template-key UserManager --d
 # Valid db-type values: mssql, mysql, postgresql
 # Valid pattern values: Service, CqrsAndMediator
 # Note: Adding a module automatically downloads and saves the template DBML locally
-quickcode demo modules remove --module-name MyModule
-quickcode templates
 
-# 5. Generate and watch
+# 8. Remove a module
+quickcode demo modules remove --module-name MyModule
+
+# 9. Download project & template DBML files
+quickcode demo get-dbmls
+# Running `quickcode demo get-dbmls` also places the latest `README.md` in the same folder so the command reference is always available offline.
+
+# 10. Upload DBML files back to the API
+quickcode demo update-dbmls
+
+# 11. Generate and watch
 # Trigger code generation for the project. By default, watches the progress in real-time.
 quickcode demo generate
 # Or disable watching:
 quickcode demo generate --watch false
 
-# 6. Clone or pull project from GitHub
+# 12. Other useful commands
+quickcode templates                    # List available module templates
+quickcode demo forgot-secret           # Request secret code reminder
+quickcode demo verify-secret           # Verify email + secret combination
+quickcode demo remove                  # Remove stored credentials and local DBML folder
+
+# 13. Clone or pull project from GitHub
 quickcode demo pull
 
-# 7. Push changes to project on GitHub
+# 14. Push changes to project on GitHub
 quickcode demo push
 ```
 
@@ -125,26 +133,24 @@ cd /path/to/quickcode.cli
 # 1. CLI help
 dotnet run --project src/QuickCode.Cli -- --help
 
-# 2. Store project credentials
-dotnet run --project src/QuickCode.Cli -- demo config --set email=demo@quickcode.net
+# 2. Check if project exists
+dotnet run --project src/QuickCode.Cli -- demo check
+
+# 3. Create project (if it doesn't exist)
+dotnet run --project src/QuickCode.Cli -- demo create --email demo@quickcode.net
+# Note: The email is automatically saved to local config after creation.
+
+# 4. Store project secret_code (check your email for the secret code)
 dotnet run --project src/QuickCode.Cli -- demo config --set secret_code=SECRET123
 
-# 2a. Validate configuration
+# 5. Validate configuration
 dotnet run --project src/QuickCode.Cli -- config validate
 dotnet run --project src/QuickCode.Cli -- demo validate
 
-# 3. Project operations (project-first syntax)
-dotnet run --project src/QuickCode.Cli -- demo create --email demo@quickcode.net
-dotnet run --project src/QuickCode.Cli -- demo check
-dotnet run --project src/QuickCode.Cli -- demo forgot-secret --email demo@quickcode.net
-dotnet run --project src/QuickCode.Cli -- demo verify-secret --email demo@quickcode.net --secret-code SECRET123
-dotnet run --project src/QuickCode.Cli -- demo get-dbmls
-dotnet run --project src/QuickCode.Cli -- demo update-dbmls
-dotnet run --project src/QuickCode.Cli -- demo validate
-
-# 4. Module listing / editing (examples)
+# 6. List modules in the project
 dotnet run --project src/QuickCode.Cli -- demo modules
-# Add module (all parameters except --module-name are optional with defaults)
+
+# 7. Add a new module (all parameters except --module-name are optional with defaults)
 dotnet run --project src/QuickCode.Cli -- demo modules add --module-name MyModule
 # Or with all parameters explicitly:
 dotnet run --project src/QuickCode.Cli -- demo modules add --module-name MyModule --template-key UserManager --db-type mssql --pattern Service
@@ -152,10 +158,17 @@ dotnet run --project src/QuickCode.Cli -- demo modules add --module-name MyModul
 # Valid db-type values: mssql, mysql, postgresql
 # Valid pattern values: Service, CqrsAndMediator
 # Note: Adding a module automatically downloads and saves the template DBML locally
-dotnet run --project src/QuickCode.Cli -- demo modules remove --module-name MyModule
-dotnet run --project src/QuickCode.Cli -- templates
 
-# 5. Generate and watch
+# 8. Remove a module
+dotnet run --project src/QuickCode.Cli -- demo modules remove --module-name MyModule
+
+# 9. Download project & template DBML files
+dotnet run --project src/QuickCode.Cli -- demo get-dbmls
+
+# 10. Upload DBML files back to the API
+dotnet run --project src/QuickCode.Cli -- demo update-dbmls
+
+# 11. Generate and watch
 # Trigger code generation for the project. By default, watches the progress in real-time.
 dotnet run --project src/QuickCode.Cli -- demo generate
 # Or disable watching:

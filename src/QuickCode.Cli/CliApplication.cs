@@ -1051,9 +1051,28 @@ public sealed class CliApplication
         var config = _configService.Load();
         using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
         var result = await client.CreateProjectAsync(projectName, email);
-        Console.WriteLine(result
-            ? $"✅ Project '{projectName}' created/request submitted. Check email for secret code."
-            : "⚠️ Project creation request failed.");
+
+        if (!result)
+        {
+            Console.WriteLine("⚠️ Project creation request failed.");
+            return;
+        }
+
+        Console.WriteLine($"✅ Project '{projectName}' created/request submitted. Check email for secret code.");
+
+        // Persist email to config so user only needs to store secret_code later
+        if (!config.Projects.TryGetValue(projectName, out var projectConfig) || string.IsNullOrWhiteSpace(projectConfig.Email))
+        {
+            projectConfig ??= new ProjectConfig();
+            projectConfig.Email = email;
+            config.Projects[projectName] = projectConfig;
+            _configService.Save(config);
+
+            if (verbose)
+            {
+                Console.WriteLine($"ℹ️ Stored email for project '{projectName}' in local config.");
+            }
+        }
     }
 
     private async Task HandleProjectCheckAsync(string projectName, bool verbose)

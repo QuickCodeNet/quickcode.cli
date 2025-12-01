@@ -69,29 +69,24 @@ CLI’yi repository kökünden (önerilir) veya proje klasörü içinden çalı�
 # 1. Yardım
 quickcode --help
 
-# 2. Proje bilgilerini kaydet
-quickcode demo config --set email=demo@quickcode.net
+# 2. Projenin var olup olmadığını kontrol et
+quickcode demo check
+
+# 3. Proje oluştur (yoksa)
+quickcode demo create --email demo@quickcode.net
+# Not: Proje oluşturulduğunda email otomatik olarak local konfige kaydedilir.
+
+# 4. Secret code'u kaydet (email'inizde gelen secret code'u kullanın)
 quickcode demo config --set secret_code=SECRET123
 
-# 2a. Konfigürasyonu doğrula
+# 5. Konfigürasyonu doğrula
 quickcode config validate
-quickcode project validate --name demo
-
-# 3. Proje işlemleri (proje adı önde)
-quickcode demo create --email demo@quickcode.net
-quickcode demo check
-quickcode demo forgot-secret [--email demo@quickcode.net]
-quickcode demo verify-secret [--email demo@quickcode.net --secret-code SECRET123]
-quickcode demo get-dbmls
-quickcode demo update-dbmls
 quickcode demo validate
-quickcode demo remove
 
-`quickcode demo get-dbmls` komutu aynı klasöre güncel `README.md` dosyasını da indirir; böylece dokümana çevrimdışı erişebilirsin.
-
-# 4. Modül örnekleri
+# 6. Projedeki modülleri listele
 quickcode demo modules
-# Modül ekle (--module-name dışındaki tüm parametreler opsiyonel, varsayılan değerlere sahip)
+
+# 7. Yeni modül ekle (--module-name dışındaki tüm parametreler opsiyonel, varsayılan değerlere sahip)
 quickcode demo modules add --module-name MyModule
 # Veya tüm parametrelerle açıkça:
 quickcode demo modules add --module-name MyModule --template-key UserManager --db-type mssql --pattern Service
@@ -99,19 +94,33 @@ quickcode demo modules add --module-name MyModule --template-key UserManager --d
 # Geçerli db-type değerleri: mssql, mysql, postgresql
 # Geçerli pattern değerleri: Service, CqrsAndMediator
 # Not: Modül eklerken template DBML'i otomatik olarak local'e indirilir ve kaydedilir
-quickcode demo modules remove --module-name MyModule
-quickcode templates
 
-# 5. Generate + watch
+# 8. Modül sil
+quickcode demo modules remove --module-name MyModule
+
+# 9. Proje & template DBML dosyalarını indir
+quickcode demo get-dbmls
+# `quickcode demo get-dbmls` komutu aynı klasöre güncel `README.md` dosyasını da indirir; böylece dokümana çevrimdışı erişebilirsin.
+
+# 10. DBML dosyalarını API'ye yükle
+quickcode demo update-dbmls
+
+# 11. Generate + watch
 # Proje için kod üretimini başlatır. Varsayılan olarak ilerlemeyi gerçek zamanlı izler.
 quickcode demo generate
 # Veya izlemeyi devre dışı bırak:
 quickcode demo generate --watch false
 
-# 6. Projeyi GitHub'dan indir veya güncelle
+# 12. Diğer yararlı komutlar
+quickcode templates                    # Mevcut modül şablonlarını listele
+quickcode demo forgot-secret           # Secret code hatırlatma iste
+quickcode demo verify-secret           # Email + secret kombinasyonunu doğrula
+quickcode demo remove                  # Kayıtlı bilgileri ve local DBML klasörünü sil
+
+# 13. Projeyi GitHub'dan indir veya güncelle
 quickcode demo pull
 
-# 7. Projedeki değişiklikleri GitHub'a push et
+# 14. Projedeki değişiklikleri GitHub'a push et
 quickcode demo push
 ```
 
@@ -124,26 +133,24 @@ cd /path/to/quickcode.cli
 # 1. Yardım
 dotnet run --project src/QuickCode.Cli -- --help
 
-# 2. Proje bilgileri
-dotnet run --project src/QuickCode.Cli -- demo config --set email=demo@quickcode.net
+# 2. Projenin var olup olmadığını kontrol et
+dotnet run --project src/QuickCode.Cli -- demo check
+
+# 3. Proje oluştur (yoksa)
+dotnet run --project src/QuickCode.Cli -- demo create --email demo@quickcode.net
+# Not: Proje oluşturulduğunda email otomatik olarak local konfige kaydedilir.
+
+# 4. Secret code'u kaydet (email'inizde gelen secret code'u kullanın)
 dotnet run --project src/QuickCode.Cli -- demo config --set secret_code=SECRET123
 
-# 2a. Konfigürasyonu doğrula
+# 5. Konfigürasyonu doğrula
 dotnet run --project src/QuickCode.Cli -- config validate
-dotnet run --project src/QuickCode.Cli -- project validate --name demo
-
-# 3. Proje işlemleri (proje adı önde)
-dotnet run --project src/QuickCode.Cli -- demo create --email demo@quickcode.net
-dotnet run --project src/QuickCode.Cli -- demo check
-dotnet run --project src/QuickCode.Cli -- demo forgot-secret --email demo@quickcode.net
-dotnet run --project src/QuickCode.Cli -- demo verify-secret --email demo@quickcode.net --secret-code SECRET123
-dotnet run --project src/QuickCode.Cli -- demo get-dbmls
-dotnet run --project src/QuickCode.Cli -- demo update-dbmls
 dotnet run --project src/QuickCode.Cli -- demo validate
 
-# 4. Modül örnekleri
+# 6. Projedeki modülleri listele
 dotnet run --project src/QuickCode.Cli -- demo modules
-# Modül ekle (--module-name dışındaki tüm parametreler opsiyonel, varsayılan değerlere sahip)
+
+# 7. Yeni modül ekle (--module-name dışındaki tüm parametreler opsiyonel, varsayılan değerlere sahip)
 dotnet run --project src/QuickCode.Cli -- demo modules add --module-name MyModule
 # Veya tüm parametrelerle açıkça:
 dotnet run --project src/QuickCode.Cli -- demo modules add --module-name MyModule --template-key UserManager --db-type mssql --pattern Service
@@ -151,10 +158,17 @@ dotnet run --project src/QuickCode.Cli -- demo modules add --module-name MyModul
 # Geçerli db-type değerleri: mssql, mysql, postgresql
 # Geçerli pattern değerleri: Service, CqrsAndMediator
 # Not: Modül eklerken template DBML'i otomatik olarak local'e indirilir ve kaydedilir
-dotnet run --project src/QuickCode.Cli -- demo modules remove --module-name MyModule
-dotnet run --project src/QuickCode.Cli -- templates
 
-# 5. Generate + watch
+# 8. Modül sil
+dotnet run --project src/QuickCode.Cli -- demo modules remove --module-name MyModule
+
+# 9. Proje & template DBML dosyalarını indir
+dotnet run --project src/QuickCode.Cli -- demo get-dbmls
+
+# 10. DBML dosyalarını API'ye yükle
+dotnet run --project src/QuickCode.Cli -- demo update-dbmls
+
+# 11. Generate + watch
 # Proje için kod üretimini başlatır. Varsayılan olarak ilerlemeyi gerçek zamanlı izler.
 dotnet run --project src/QuickCode.Cli -- demo generate
 # Veya izlemeyi devre dışı bırak:
