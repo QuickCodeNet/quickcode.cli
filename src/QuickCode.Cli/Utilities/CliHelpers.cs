@@ -314,6 +314,48 @@ public static class CliHelpers
         Console.WriteLine(new string('-', 80));
     }
 
+    public static void RenderTemplatesList(JsonElement templates)
+    {
+        if (templates.ValueKind != JsonValueKind.Array)
+        {
+            Console.WriteLine("No templates found.");
+            return;
+        }
+
+        var rows = new List<(string Key, string Description)>();
+        foreach (var template in templates.EnumerateArray())
+        {
+            var key = template.TryGetProperty("key", out var keyProp) ? keyProp.GetString() ?? "-" : "-";
+            var description = template.TryGetProperty("description", out var descProp) 
+                ? descProp.GetString() ?? "-"
+                : template.TryGetProperty("name", out var nameProp) 
+                    ? nameProp.GetString() ?? "-" 
+                    : "-";
+            
+            rows.Add((Key: key, Description: description));
+        }
+
+        if (rows.Count == 0)
+        {
+            Console.WriteLine("No templates found.");
+            return;
+        }
+
+        Console.WriteLine($"Available Templates ({rows.Count}):");
+        Console.WriteLine(new string('-', 80));
+        Console.WriteLine("{0,-30} {1,-50}", "Template Key", "Description");
+        Console.WriteLine(new string('-', 80));
+        foreach (var row in rows)
+        {
+            // Truncate description if too long
+            var description = row.Description.Length > 50 
+                ? row.Description.Substring(0, 47) + "..." 
+                : row.Description;
+            Console.WriteLine("{0,-30} {1,-50}", row.Key, description);
+        }
+        Console.WriteLine(new string('-', 80));
+    }
+
     public static bool AreAllActionsCompleted(JsonElement allActions)
     {
         if (allActions.ValueKind != JsonValueKind.Array)

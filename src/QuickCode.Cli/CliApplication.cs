@@ -501,8 +501,8 @@ public sealed class CliApplication
             {
                 var config = _configService.Load();
                 using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-                var modules = await client.GetAvailableModulesAsync();
-                Console.WriteLine(modules.ToString());
+                var templates = await client.GetAvailableModulesAsync();
+                CliHelpers.RenderTemplatesList(templates);
             });
         }, verboseOption);
 
@@ -627,8 +627,8 @@ public sealed class CliApplication
             {
                 var config = _configService.Load();
                 using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-                var modules = await client.GetAvailableModulesAsync();
-                Console.WriteLine(modules.ToString());
+                var templates = await client.GetAvailableModulesAsync();
+                CliHelpers.RenderTemplatesList(templates);
             });
         }, verboseOption);
         return command;
