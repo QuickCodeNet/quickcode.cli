@@ -19,6 +19,28 @@ public sealed class CliApplication
     private static readonly Uri ProjectReadmeUri = new("https://raw.githubusercontent.com/QuickCodeNet/quickcode.cli/main/README.md");
     private static readonly Uri HomebrewFormulaUri = new("https://raw.githubusercontent.com/QuickCodeNet/homebrew-quickcode-cli/main/Formula/quickcode-cli.rb");
     private readonly ConfigService _configService = new();
+    
+    private static async Task HandleWithExceptionCatchingAsync(Func<Task> action)
+    {
+        try
+        {
+            await action();
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine(ex.Message);
+            Console.ResetColor();
+            Environment.Exit(1);
+        }
+        catch (HttpRequestException ex)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine(ex.Message);
+            Console.ResetColor();
+            Environment.Exit(1);
+        }
+    }
 
     public Task<int> RunAsync(string[] args)
     {
@@ -305,7 +327,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string project, string email, bool verbose) =>
         {
-            await HandleProjectCreateAsync(project, email, verbose);
+            await HandleWithExceptionCatchingAsync(async () => await HandleProjectCreateAsync(project, email, verbose));
         }, projectArg, emailOption, verboseOption);
 
         return command;
@@ -321,7 +343,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string project, bool verbose) =>
         {
-            await HandleProjectCheckAsync(project, verbose);
+            await HandleWithExceptionCatchingAsync(async () => await HandleProjectCheckAsync(project, verbose));
         }, projectArg, verboseOption);
 
         return command;
@@ -340,7 +362,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string project, string? email, bool verbose) =>
         {
-            await HandleProjectForgotSecretAsync(project, email, verbose);
+            await HandleWithExceptionCatchingAsync(async () => await HandleProjectForgotSecretAsync(project, email, verbose));
         }, projectArg, emailOption, verboseOption);
 
         return command;
@@ -362,7 +384,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string project, string? email, string? secret, bool verbose) =>
         {
-            await HandleProjectVerifySecretAsync(project, email, secret, verbose);
+            await HandleWithExceptionCatchingAsync(async () => await HandleProjectVerifySecretAsync(project, email, secret, verbose));
         }, projectArg, emailOption, secretOption, verboseOption);
 
         return command;
@@ -383,7 +405,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string project, string? email, string? secret, bool verbose) =>
         {
-            await HandleProjectDownloadDbmlsAsync(project, email, secret, verbose);
+            await HandleWithExceptionCatchingAsync(async () => await HandleProjectDownloadDbmlsAsync(project, email, secret, verbose));
         }, projectArg, emailOption, secretOption, verboseOption);
 
         return command;
@@ -404,7 +426,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string project, string? email, string? secret, bool verbose) =>
         {
-            await HandleProjectUpdateDbmlsAsync(project, email, secret, verbose);
+            await HandleWithExceptionCatchingAsync(async () => await HandleProjectUpdateDbmlsAsync(project, email, secret, verbose));
         }, projectArg, emailOption, secretOption, verboseOption);
 
         return command;
@@ -449,10 +471,13 @@ public sealed class CliApplication
 
         command.SetHandler(async (bool verbose) =>
         {
-            var config = _configService.Load();
-            using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-            var modules = await client.GetAvailableModulesAsync();
-            Console.WriteLine(modules.ToString());
+            await HandleWithExceptionCatchingAsync(async () =>
+            {
+                var config = _configService.Load();
+                using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
+                var modules = await client.GetAvailableModulesAsync();
+                Console.WriteLine(modules.ToString());
+            });
         }, verboseOption);
 
         return command;
@@ -469,7 +494,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string name, string email, bool verbose) =>
         {
-            await HandleProjectCreateAsync(name, email, verbose);
+            await HandleWithExceptionCatchingAsync(async () => await HandleProjectCreateAsync(name, email, verbose));
         }, nameOption, emailOption, verboseOption);
 
         return command;
@@ -488,7 +513,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string name, string? email, string? secret, bool verbose) =>
         {
-            await HandleProjectVerifySecretAsync(name, email, secret, verbose);
+            await HandleWithExceptionCatchingAsync(async () => await HandleProjectVerifySecretAsync(name, email, secret, verbose));
         }, nameOption, emailOption, secretOption, verboseOption);
 
         return command;
@@ -518,7 +543,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string name, bool verbose) =>
         {
-            await HandleProjectCheckAsync(name, verbose);
+            await HandleWithExceptionCatchingAsync(async () => await HandleProjectCheckAsync(name, verbose));
         }, nameOption, verboseOption);
 
         return command;
@@ -535,7 +560,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string name, string? email, bool verbose) =>
         {
-            await HandleProjectForgotSecretAsync(name, email, verbose);
+            await HandleWithExceptionCatchingAsync(async () => await HandleProjectForgotSecretAsync(name, email, verbose));
         }, nameOption, emailOption, verboseOption);
 
         return command;
@@ -572,10 +597,13 @@ public sealed class CliApplication
         var command = new Command("available", "List available module templates");
         command.SetHandler(async (bool verbose) =>
         {
-            var config = _configService.Load();
-            using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-            var modules = await client.GetAvailableModulesAsync();
-            Console.WriteLine(modules.ToString());
+            await HandleWithExceptionCatchingAsync(async () =>
+            {
+                var config = _configService.Load();
+                using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
+                var modules = await client.GetAvailableModulesAsync();
+                Console.WriteLine(modules.ToString());
+            });
         }, verboseOption);
         return command;
     }
@@ -589,21 +617,14 @@ public sealed class CliApplication
 
         command.SetHandler(async (string? projectName, bool verbose) =>
         {
-            try
+            await HandleWithExceptionCatchingAsync(async () =>
             {
                 var config = _configService.Load();
                 var (name, _, _) = _configService.ResolveProjectCredentials(config, projectName, null, null);
                 using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
                 var modules = await client.GetProjectModulesAsync(name);
                 CliHelpers.RenderModuleList(modules);
-            }
-            catch (InvalidOperationException ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine(ex.Message);
-                Console.ResetColor();
-                Environment.Exit(1);
-            }
+            });
         }, projectOption, verboseOption);
 
         return command;
@@ -631,65 +652,68 @@ public sealed class CliApplication
         command.SetHandler(async (string? projectName, string? email, string? secret, string moduleName,
             string templateKey, string dbType, string pattern, bool verbose) =>
         {
-            // Validate db-type value
-            var validDbTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "mssql", "mysql", "postgresql" };
-            if (!validDbTypes.Contains(dbType))
+            await HandleWithExceptionCatchingAsync(async () =>
             {
-                Console.WriteLine($"❌ Invalid db-type value: {dbType}");
-                Console.WriteLine($"Valid values: mssql, mysql, postgresql");
-                return;
-            }
-            
-            // Validate pattern value
-            var validPatterns = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Service", "CqrsAndMediator" };
-            if (!validPatterns.Contains(pattern))
-            {
-                Console.WriteLine($"❌ Invalid pattern value: {pattern}");
-                Console.WriteLine($"Valid values: Service, CqrsAndMediator");
-                return;
-            }
-            
-            var config = _configService.Load();
-            var (name, resolvedEmail, resolvedSecret) = _configService.ResolveProjectCredentials(config, projectName, email, secret);
-            using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-            
-            var result = await client.AddProjectModuleAsync(name, resolvedEmail, resolvedSecret, moduleName, templateKey, dbType, pattern);
-            if (!result)
-            {
-                Console.WriteLine("⚠️ Module add failed.");
-                return;
-            }
-            
-            Console.WriteLine("✅ Module added.");
-            
-            // Download and save the module DBML locally
-            try
-            {
-                Console.Write($"⬇️  Downloading DBML for {moduleName}... ");
-                var dbml = await client.GetModuleDbmlAsync(name, moduleName, templateKey, resolvedEmail, resolvedSecret);
-                
-                var currentDir = Directory.GetCurrentDirectory();
-                var currentDirName = new DirectoryInfo(currentDir).Name;
-                var projectDir = string.Equals(currentDirName, name, StringComparison.OrdinalIgnoreCase)
-                    ? currentDir
-                    : Path.Combine(currentDir, name);
-                
-                if (!Directory.Exists(projectDir))
+                // Validate db-type value
+                var validDbTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "mssql", "mysql", "postgresql" };
+                if (!validDbTypes.Contains(dbType))
                 {
-                    Directory.CreateDirectory(projectDir);
+                    Console.WriteLine($"❌ Invalid db-type value: {dbType}");
+                    Console.WriteLine($"Valid values: mssql, mysql, postgresql");
+                    return;
                 }
                 
-                var fileName = $"{moduleName}.dbml";
-                var projectFilePath = Path.Combine(projectDir, fileName);
+                // Validate pattern value
+                var validPatterns = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Service", "CqrsAndMediator" };
+                if (!validPatterns.Contains(pattern))
+                {
+                    Console.WriteLine($"❌ Invalid pattern value: {pattern}");
+                    Console.WriteLine($"Valid values: Service, CqrsAndMediator");
+                    return;
+                }
                 
-                await File.WriteAllTextAsync(projectFilePath, dbml);
-                Console.WriteLine($"✅ Saved to {projectFilePath}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"⚠️ Failed to download DBML: {ex.Message}");
-                Console.WriteLine("💡 You can download it later using 'quickcode get-dbmls' or 'quickcode module get-dbml'");
-            }
+                var config = _configService.Load();
+                var (name, resolvedEmail, resolvedSecret) = _configService.ResolveProjectCredentials(config, projectName, email, secret);
+                using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
+                
+                var result = await client.AddProjectModuleAsync(name, resolvedEmail, resolvedSecret, moduleName, templateKey, dbType, pattern);
+                if (!result)
+                {
+                    Console.WriteLine("⚠️ Module add failed.");
+                    return;
+                }
+                
+                Console.WriteLine("✅ Module added.");
+                
+                // Download and save the module DBML locally
+                try
+                {
+                    Console.Write($"⬇️  Downloading DBML for {moduleName}... ");
+                    var dbml = await client.GetModuleDbmlAsync(name, moduleName, templateKey, resolvedEmail, resolvedSecret);
+                    
+                    var currentDir = Directory.GetCurrentDirectory();
+                    var currentDirName = new DirectoryInfo(currentDir).Name;
+                    var projectDir = string.Equals(currentDirName, name, StringComparison.OrdinalIgnoreCase)
+                        ? currentDir
+                        : Path.Combine(currentDir, name);
+                    
+                    if (!Directory.Exists(projectDir))
+                    {
+                        Directory.CreateDirectory(projectDir);
+                    }
+                    
+                    var fileName = $"{moduleName}.dbml";
+                    var projectFilePath = Path.Combine(projectDir, fileName);
+                    
+                    await File.WriteAllTextAsync(projectFilePath, dbml);
+                    Console.WriteLine($"✅ Saved to {projectFilePath}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"⚠️ Failed to download DBML: {ex.Message}");
+                    Console.WriteLine("💡 You can download it later using 'quickcode get-dbmls' or 'quickcode module get-dbml'");
+                }
+            });
         }, projectOption, emailOption, secretOption, moduleNameOption, templateOption, dbTypeOption, patternOption, verboseOption);
 
         return command;
@@ -710,11 +734,14 @@ public sealed class CliApplication
 
         command.SetHandler(async (string? projectName, string? email, string? secret, string moduleName, bool verbose) =>
         {
-            var config = _configService.Load();
-            var (name, resolvedEmail, resolvedSecret) = _configService.ResolveProjectCredentials(config, projectName, email, secret);
-            using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-            var result = await client.RemoveProjectModuleAsync(name, resolvedEmail, resolvedSecret, moduleName);
-            Console.WriteLine(result ? "✅ Module removed." : "⚠️ Module removal failed.");
+            await HandleWithExceptionCatchingAsync(async () =>
+            {
+                var config = _configService.Load();
+                var (name, resolvedEmail, resolvedSecret) = _configService.ResolveProjectCredentials(config, projectName, email, secret);
+                using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
+                var result = await client.RemoveProjectModuleAsync(name, resolvedEmail, resolvedSecret, moduleName);
+                Console.WriteLine(result ? "✅ Module removed." : "⚠️ Module removal failed.");
+            });
         }, projectOption, emailOption, secretOption, moduleNameOption, verboseOption);
 
         return command;
@@ -740,18 +767,21 @@ public sealed class CliApplication
         command.SetHandler(async (string project, string moduleName, string templateKey, string projectEmail,
             string secretCode, FileInfo? output, bool verbose) =>
         {
-            var config = _configService.Load();
-            using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-            var dbml = await client.GetModuleDbmlAsync(project, moduleName, templateKey, projectEmail, secretCode);
-            if (output is not null)
+            await HandleWithExceptionCatchingAsync(async () =>
             {
-                await File.WriteAllTextAsync(output.FullName, dbml);
-                Console.WriteLine($"✅ DBML saved to {output.FullName}");
-            }
-            else
-            {
-                Console.WriteLine(dbml);
-            }
+                var config = _configService.Load();
+                using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
+                var dbml = await client.GetModuleDbmlAsync(project, moduleName, templateKey, projectEmail, secretCode);
+                if (output is not null)
+                {
+                    await File.WriteAllTextAsync(output.FullName, dbml);
+                    Console.WriteLine($"✅ DBML saved to {output.FullName}");
+                }
+                else
+                {
+                    Console.WriteLine(dbml);
+                }
+            });
         }, projectOption, moduleNameOption, templateOption, emailOption, secretOption, outputOption, verboseOption);
 
         return command;
@@ -780,33 +810,36 @@ public sealed class CliApplication
 
         command.SetHandler(async (InvocationContext ctx) =>
         {
-            var projectName = ctx.ParseResult.GetValueForOption(projectOption);
-            var email = ctx.ParseResult.GetValueForOption(emailOption);
-            var secret = ctx.ParseResult.GetValueForOption(secretOption);
-            var moduleName = ctx.ParseResult.GetValueForOption(moduleNameOption)!;
-            var templateKey = ctx.ParseResult.GetValueForOption(templateOption)!;
-            var file = ctx.ParseResult.GetValueForOption(fileOption);
-            var dbmlInline = ctx.ParseResult.GetValueForOption(dbmlOption);
-            var dbType = ctx.ParseResult.GetValueForOption(dbTypeOption) ?? "mssql";
-            var verbose = ctx.ParseResult.GetValueForOption(verboseOption);
-
-            var config = _configService.Load();
-            var (name, resolvedEmail, resolvedSecret) = _configService.ResolveProjectCredentials(config, projectName, email, secret);
-
-            var dbmlContent = dbmlInline;
-            if (dbmlContent is null && file is not null)
+            await HandleWithExceptionCatchingAsync(async () =>
             {
-                dbmlContent = await File.ReadAllTextAsync(file.FullName);
-            }
+                var projectName = ctx.ParseResult.GetValueForOption(projectOption);
+                var email = ctx.ParseResult.GetValueForOption(emailOption);
+                var secret = ctx.ParseResult.GetValueForOption(secretOption);
+                var moduleName = ctx.ParseResult.GetValueForOption(moduleNameOption)!;
+                var templateKey = ctx.ParseResult.GetValueForOption(templateOption)!;
+                var file = ctx.ParseResult.GetValueForOption(fileOption);
+                var dbmlInline = ctx.ParseResult.GetValueForOption(dbmlOption);
+                var dbType = ctx.ParseResult.GetValueForOption(dbTypeOption) ?? "mssql";
+                var verbose = ctx.ParseResult.GetValueForOption(verboseOption);
 
-            if (string.IsNullOrWhiteSpace(dbmlContent))
-            {
-                throw new InvalidOperationException("Provide DBML content via --dbml or --file.");
-            }
+                var config = _configService.Load();
+                var (name, resolvedEmail, resolvedSecret) = _configService.ResolveProjectCredentials(config, projectName, email, secret);
 
-            using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-            var result = await client.SaveModuleDbmlAsync(name, resolvedEmail, resolvedSecret, moduleName, templateKey, dbmlContent, dbType);
-            Console.WriteLine(result ? "✅ DBML saved." : "⚠️ DBML save failed.");
+                var dbmlContent = dbmlInline;
+                if (dbmlContent is null && file is not null)
+                {
+                    dbmlContent = await File.ReadAllTextAsync(file.FullName);
+                }
+
+                if (string.IsNullOrWhiteSpace(dbmlContent))
+                {
+                    throw new InvalidOperationException("Provide DBML content via --dbml or --file.");
+                }
+
+                using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
+                var result = await client.SaveModuleDbmlAsync(name, resolvedEmail, resolvedSecret, moduleName, templateKey, dbmlContent, dbType);
+                Console.WriteLine(result ? "✅ DBML saved." : "⚠️ DBML save failed.");
+            });
         });
 
         return command;
@@ -829,23 +862,26 @@ public sealed class CliApplication
 
         command.SetHandler(async (string? project, string? email, string? secret, string? sessionId, bool watch, bool verbose) =>
         {
-            var config = _configService.Load();
-            var (name, resolvedEmail, resolvedSecret) = _configService.ResolveProjectCredentials(config, project, email, secret);
-            var session = string.IsNullOrWhiteSpace(sessionId) ? CliHelpers.GenerateSessionId() : sessionId!;
-
-            using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-            var success = await client.GenerateProjectSolutionAsync(name, resolvedEmail, resolvedSecret, session);
-            if (!success)
+            await HandleWithExceptionCatchingAsync(async () =>
             {
-                Console.WriteLine("⚠️ API returned failure response.");
-                return;
-            }
+                var config = _configService.Load();
+                var (name, resolvedEmail, resolvedSecret) = _configService.ResolveProjectCredentials(config, project, email, secret);
+                var session = string.IsNullOrWhiteSpace(sessionId) ? CliHelpers.GenerateSessionId() : sessionId!;
 
-            Console.WriteLine($"✅ Generation started for '{name}'. Session: {session}");
-            if (watch)
-            {
-                await WatchGenerationAsync(config, client, session, verbose);
-            }
+                using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
+                var success = await client.GenerateProjectSolutionAsync(name, resolvedEmail, resolvedSecret, session);
+                if (!success)
+                {
+                    Console.WriteLine("⚠️ API returned failure response.");
+                    return;
+                }
+
+                Console.WriteLine($"✅ Generation started for '{name}'. Session: {session}");
+                if (watch)
+                {
+                    await WatchGenerationAsync(config, client, session, verbose);
+                }
+            });
         }, projectArg, emailOption, secretOption, sessionOption, watchOption, verboseOption);
 
         return command;
@@ -861,7 +897,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string project, bool verbose) =>
         {
-            await HandlePullAsync(project, verbose);
+            await HandleWithExceptionCatchingAsync(async () => await HandlePullAsync(project, verbose));
         }, projectArg, verboseOption);
 
         return command;
@@ -877,7 +913,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string project, bool verbose) =>
         {
-            await HandlePushAsync(project, verbose);
+            await HandleWithExceptionCatchingAsync(async () => await HandlePushAsync(project, verbose));
         }, projectArg, verboseOption);
 
         return command;
@@ -1104,19 +1140,22 @@ public sealed class CliApplication
 
         command.SetHandler(async (string sessionId, bool verbose) =>
         {
-            var config = _configService.Load();
-            using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
-            var status = await client.GetActiveProjectAsync(sessionId);
-            if (status is null)
+            await HandleWithExceptionCatchingAsync(async () =>
             {
-                Console.WriteLine("No active generation found.");
-                return;
-            }
+                var config = _configService.Load();
+                using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
+                var status = await client.GetActiveProjectAsync(sessionId);
+                if (status is null)
+                {
+                    Console.WriteLine("No active generation found.");
+                    return;
+                }
 
-            Console.WriteLine($"Run ID: {status.ActiveRunId}");
-            Console.WriteLine($"Project: {status.ProjectName}");
-            Console.WriteLine($"Started: {status.StartDate}");
-            Console.WriteLine($"Finished: {status.IsFinished}");
+                Console.WriteLine($"Run ID: {status.ActiveRunId}");
+                Console.WriteLine($"Project: {status.ProjectName}");
+                Console.WriteLine($"Started: {status.StartDate}");
+                Console.WriteLine($"Finished: {status.IsFinished}");
+            });
         }, sessionOption, verboseOption);
 
         return command;
@@ -1756,7 +1795,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string projectName, string? email, string? secret, bool verbose) =>
         {
-            await HandleProjectDownloadDbmlsAsync(projectName, email, secret, verbose);
+            await HandleWithExceptionCatchingAsync(async () => await HandleProjectDownloadDbmlsAsync(projectName, email, secret, verbose));
         }, nameOption, emailOption, secretOption, verboseOption);
 
         return command;
@@ -1775,7 +1814,7 @@ public sealed class CliApplication
 
         command.SetHandler(async (string projectName, string? email, string? secret, bool verbose) =>
         {
-            await HandleProjectUpdateDbmlsAsync(projectName, email, secret, verbose);
+            await HandleWithExceptionCatchingAsync(async () => await HandleProjectUpdateDbmlsAsync(projectName, email, secret, verbose));
         }, nameOption, emailOption, secretOption, verboseOption);
 
         return command;
