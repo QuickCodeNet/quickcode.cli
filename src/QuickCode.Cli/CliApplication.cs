@@ -2,9 +2,11 @@
 using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
+using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using QuickCode.Cli.Configuration;
 using QuickCode.Cli.Models;
 using QuickCode.Cli.Services;
@@ -15,11 +17,15 @@ namespace QuickCode.Cli;
 public sealed class CliApplication
 {
     private static readonly Uri ProjectReadmeUri = new("https://raw.githubusercontent.com/QuickCodeNet/quickcode.cli/main/README.md");
+    private static readonly Uri HomebrewFormulaUri = new("https://raw.githubusercontent.com/QuickCodeNet/homebrew-quickcode-cli/main/Formula/quickcode-cli.rb");
     private readonly ConfigService _configService = new();
 
     public Task<int> RunAsync(string[] args)
     {
         var root = BuildRootCommand();
+        
+        // Check for version update in background (non-blocking)
+        _ = CheckVersionUpdateAsync();
         
         // Handle "quickcode <project> pull/push" format by rearranging args
         if (args.Length >= 2)
@@ -41,6 +47,76 @@ public sealed class CliApplication
         }
         
         return root.InvokeAsync(args);
+    }
+    
+    private async Task CheckVersionUpdateAsync()
+    {
+        try
+        {
+            // Get current version from assembly
+            var currentVersion = Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+                ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString()
+                ?? "unknown";
+            
+            // Remove any suffix like "+build" from version
+            currentVersion = currentVersion.Split('+')[0].Split('-')[0];
+            
+            // Fetch latest version from homebrew formula with short timeout
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
+            var formulaContent = await httpClient.GetStringAsync(HomebrewFormulaUri);
+            
+            // Parse version from formula (look for "version \"X.X.X\"")
+            var versionMatch = Regex.Match(
+                formulaContent, 
+                @"version\s+[""']([^""']+)[""']"
+            );
+            
+            if (!versionMatch.Success)
+                return;
+            
+            var latestVersion = versionMatch.Groups[1].Value;
+            
+            // Compare versions
+            if (CompareVersions(currentVersion, latestVersion) < 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"⚠️  A new version is available: {latestVersion} (current: {currentVersion})");
+                Console.WriteLine($"   Update with: brew upgrade quickcode-cli");
+                Console.ResetColor();
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            // Timeout - silently ignore, don't interrupt user workflow
+        }
+        catch (HttpRequestException)
+        {
+            // Network error - silently ignore, don't interrupt user workflow
+        }
+        catch
+        {
+            // Any other error - silently ignore, don't interrupt user workflow
+        }
+    }
+    
+    private static int CompareVersions(string version1, string version2)
+    {
+        var v1Parts = version1.Split('.').Select(int.Parse).ToArray();
+        var v2Parts = version2.Split('.').Select(int.Parse).ToArray();
+        
+        var maxLength = Math.Max(v1Parts.Length, v2Parts.Length);
+        
+        for (int i = 0; i < maxLength; i++)
+        {
+            var v1Part = i < v1Parts.Length ? v1Parts[i] : 0;
+            var v2Part = i < v2Parts.Length ? v2Parts[i] : 0;
+            
+            if (v1Part < v2Part) return -1;
+            if (v1Part > v2Part) return 1;
+        }
+        
+        return 0;
     }
     
     private static bool IsKnownCommand(string arg)
@@ -1054,13 +1130,15 @@ public sealed class CliApplication
 
         if (!result)
         {
-            Console.WriteLine("⚠️ Project creation request failed.");
+            var exists = await client.CheckProjectNameAsync(projectName);
+            Console.WriteLine(exists
+                ? $"✅ Project '{projectName}' exists."
+                : "⚠️ Project creation request failed.");
             return;
         }
 
         Console.WriteLine($"✅ Project '{projectName}' created/request submitted. Check email for secret code.");
-
-        // Persist email to config so user only needs to store secret_code later
+        
         if (!config.Projects.TryGetValue(projectName, out var projectConfig) || string.IsNullOrWhiteSpace(projectConfig.Email))
         {
             projectConfig ??= new ProjectConfig();

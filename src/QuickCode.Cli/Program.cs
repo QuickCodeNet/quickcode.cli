@@ -16,6 +16,14 @@ catch (InvalidOperationException ex)
     Console.ResetColor();
     return 1;
 }
+catch (HttpRequestException ex)
+{
+    // User-friendly error messages for HTTP errors
+    Console.ForegroundColor = ConsoleColor.Red;
+    Console.WriteLine(ex.Message);
+    Console.ResetColor();
+    return 1;
+}
 catch (Exception ex)
 {
     // Check if verbose flag is set

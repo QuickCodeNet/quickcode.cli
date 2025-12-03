@@ -202,9 +202,23 @@ public sealed class QuickCodeApiClient : IDisposable
 
         if (!response.IsSuccessStatusCode)
         {
-            PrintHttpError(request, requestBody, response, responseBody);
+            // Only print detailed error info in verbose mode
+            if (_verbose)
+            {
+                PrintHttpError(request, requestBody, response, responseBody);
+            }
+            
             var message = ExtractErrorMessage(responseBody, (int)response.StatusCode);
-            throw new InvalidOperationException($"HTTP {(int)response.StatusCode} {response.StatusCode}: {message}");
+            var statusCode = (int)response.StatusCode;
+            
+            // For 4xx client errors, throw a user-friendly exception
+            if (statusCode >= 400 && statusCode < 500)
+            {
+                throw new HttpRequestException($"❌ {message}");
+            }
+            
+            // For 5xx server errors, throw with more context
+            throw new HttpRequestException($"❌ Server error: {message}");
         }
 
         response.Content = new StringContent(responseBody,
