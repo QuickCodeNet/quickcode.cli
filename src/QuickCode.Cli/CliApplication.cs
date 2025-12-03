@@ -42,12 +42,23 @@ public sealed class CliApplication
         }
     }
 
-    public Task<int> RunAsync(string[] args)
+    public async Task<int> RunAsync(string[] args)
     {
         var root = BuildRootCommand();
         
         // Check for version update in background (non-blocking)
-        _ = CheckVersionUpdateAsync();
+        // Use Task.Run to ensure it runs on thread pool and doesn't block
+        var versionCheckTask = Task.Run(async () =>
+        {
+            try
+            {
+                await CheckVersionUpdateAsync();
+            }
+            catch
+            {
+                // Silently ignore any errors in version check
+            }
+        });
         
         // Handle "quickcode <project> pull/push" format by rearranging args
         if (args.Length >= 2)
@@ -64,11 +75,18 @@ public sealed class CliApplication
                 rearrangedArgs[0] = secondArg;
                 rearrangedArgs[1] = firstArg;
                 Array.Copy(args, 2, rearrangedArgs, 2, args.Length - 2);
-                return root.InvokeAsync(rearrangedArgs);
+                var result = await root.InvokeAsync(rearrangedArgs);
+                // Wait a bit for version check to complete if it's still running
+                await Task.WhenAny(versionCheckTask, Task.Delay(2000));
+                return result;
             }
         }
         
-        return root.InvokeAsync(args);
+        var resultCode = await root.InvokeAsync(args);
+        // Wait a bit for version check to complete if it's still running
+        // This ensures the version message is shown even for fast commands
+        await Task.WhenAny(versionCheckTask, Task.Delay(2000));
+        return resultCode;
     }
     
     private async Task CheckVersionUpdateAsync()
@@ -84,8 +102,11 @@ public sealed class CliApplication
             // Remove any suffix like "+build" from version
             currentVersion = currentVersion.Split('+')[0].Split('-')[0];
             
-            // Fetch latest version from homebrew formula with short timeout
-            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
+            // Small delay to ensure console is ready
+            await Task.Delay(100);
+            
+            // Fetch latest version from homebrew formula with longer timeout
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
             var formulaContent = await httpClient.GetStringAsync(HomebrewFormulaUri);
             
             // Parse version from formula (look for "version \"X.X.X\"")
@@ -97,11 +118,16 @@ public sealed class CliApplication
             if (!versionMatch.Success)
                 return;
             
-            var latestVersion = versionMatch.Groups[1].Value;
+            var latestVersion = versionMatch.Groups[1].Value.Trim();
             
             // Compare versions
-            if (CompareVersions(currentVersion, latestVersion) < 0)
+            var comparison = CompareVersions(currentVersion, latestVersion);
+            if (comparison < 0)
             {
+                // Ensure we're on a new line before printing
+                if (Console.CursorLeft > 0)
+                    Console.WriteLine();
+                    
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine($"⚠️  A new version is available: {latestVersion} (current: {currentVersion})");
                 Console.WriteLine($"   Update with: brew upgrade quickcode-cli");
