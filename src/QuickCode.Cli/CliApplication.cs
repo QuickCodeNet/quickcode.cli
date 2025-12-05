@@ -20,6 +20,46 @@ public sealed class CliApplication
     private static readonly Uri HomebrewFormulaUri = new("https://raw.githubusercontent.com/QuickCodeNet/homebrew-quickcode-cli/main/Formula/quickcode-cli.rb");
     private readonly ConfigService _configService = new();
     
+    private static bool ValidateModuleName(string moduleName, out string errorMessage)
+    {
+        errorMessage = string.Empty;
+        
+        if (string.IsNullOrWhiteSpace(moduleName))
+        {
+            errorMessage = "Module name cannot be empty.";
+            return false;
+        }
+        
+        // Must start with a letter (a-z, A-Z)
+        if (!char.IsLetter(moduleName[0]))
+        {
+            errorMessage = "Module name must start with a letter (a-z, A-Z).";
+            return false;
+        }
+        
+        // Must contain only letters and numbers (no spaces, no special characters)
+        if (!System.Text.RegularExpressions.Regex.IsMatch(moduleName, @"^[a-zA-Z][a-zA-Z0-9]*$"))
+        {
+            errorMessage = "Module name can only contain letters (a-z, A-Z) and numbers (0-9). No spaces or special characters allowed.";
+            return false;
+        }
+        
+        // After a digit, the next character must be uppercase (camelCase rule)
+        for (int i = 0; i < moduleName.Length - 1; i++)
+        {
+            if (char.IsDigit(moduleName[i]) && char.IsLetter(moduleName[i + 1]))
+            {
+                if (!char.IsUpper(moduleName[i + 1]))
+                {
+                    errorMessage = "Module name must follow camelCase: after a digit, the next character must be uppercase (e.g., 'SmsModule2Test' not 'SmsModule2test').";
+                    return false;
+                }
+            }
+        }
+        
+        return true;
+    }
+
     private static async Task HandleWithExceptionCatchingAsync(Func<Task> action)
     {
         try
@@ -680,6 +720,15 @@ public sealed class CliApplication
         {
             await HandleWithExceptionCatchingAsync(async () =>
             {
+                // Validate module name
+                if (!ValidateModuleName(moduleName, out var moduleNameError))
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"❌ {moduleNameError}");
+                    Console.ResetColor();
+                    return;
+                }
+                
                 // Validate db-type value
                 var validDbTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "mssql", "mysql", "postgresql" };
                 if (!validDbTypes.Contains(dbType))
@@ -747,7 +796,7 @@ public sealed class CliApplication
 
     private Command BuildModuleRemoveCommand(Option<bool> verboseOption)
     {
-        var command = new Command("remove", "Remove module from project");
+        var command = new Command("remove", "Remove module from project. ⚠️ Warning: Once deleted, your data cannot be recovered.");
         var projectOption = new Option<string?>("--project");
         var emailOption = new Option<string?>("--email");
         var secretOption = new Option<string?>("--secret-code");
@@ -762,8 +811,35 @@ public sealed class CliApplication
         {
             await HandleWithExceptionCatchingAsync(async () =>
             {
+                // Validate module name
+                if (!ValidateModuleName(moduleName, out var moduleNameError))
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"❌ {moduleNameError}");
+                    Console.ResetColor();
+                    return;
+                }
+                
                 var config = _configService.Load();
                 var (name, resolvedEmail, resolvedSecret) = _configService.ResolveProjectCredentials(config, projectName, email, secret);
+                
+                // Show warning and ask for confirmation
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("⚠️  WARNING: You are about to delete a module.");
+                Console.WriteLine("   Once deleted, your data cannot be recovered.");
+                Console.ResetColor();
+                Console.WriteLine();
+                Console.Write($"Are you sure you want to delete module '{moduleName}' from project '{name}'? (yes/no): ");
+                
+                var confirmation = Console.ReadLine()?.Trim().ToLowerInvariant();
+                
+                if (confirmation != "yes" && confirmation != "y")
+                {
+                    Console.WriteLine("❌ Module removal cancelled.");
+                    return;
+                }
+                
+                Console.WriteLine();
                 using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
                 var result = await client.RemoveProjectModuleAsync(name, resolvedEmail, resolvedSecret, moduleName);
                 Console.WriteLine(result ? "✅ Module removed." : "⚠️ Module removal failed.");
