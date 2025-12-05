@@ -824,12 +824,19 @@ public sealed class CliApplication
                 var (name, resolvedEmail, resolvedSecret) = _configService.ResolveProjectCredentials(config, projectName, email, secret);
                 
                 // Show warning and ask for confirmation
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("⚠️  WARNING: You are about to delete a module.");
-                Console.WriteLine("   Once deleted, your data cannot be recovered.");
-                Console.ResetColor();
                 Console.WriteLine();
-                Console.Write($"Are you sure you want to delete module '{moduleName}' from project '{name}'? (yes/no): ");
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("⚠️  Warning: This Action Cannot Be Undone!");
+                Console.ResetColor();
+                Console.WriteLine(new string('─', 38));
+                Console.WriteLine();
+                Console.WriteLine($"Are you sure you want to remove module '{moduleName}' from project '{name}'?");
+                Console.WriteLine();
+                Console.WriteLine("• All module data will be permanently deleted");
+                Console.WriteLine("• Database tables and API endpoints will be removed");
+                Console.WriteLine("• This action cannot be reversed");
+                Console.WriteLine();
+                Console.Write("Type 'yes' to confirm: ");
                 
                 var confirmation = Console.ReadLine()?.Trim().ToLowerInvariant();
                 
