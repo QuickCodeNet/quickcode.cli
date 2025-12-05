@@ -698,11 +698,11 @@ public sealed class CliApplication
 
     private Command BuildModuleAddCommand(Option<bool> verboseOption)
     {
-        var command = new Command("add", "Add module to project");
+        var command = new Command("add", "Add module to project. Example: quickcode demo modules add --module-name UserManager");
         var projectOption = new Option<string?>("--project");
         var emailOption = new Option<string?>("--email");
         var secretOption = new Option<string?>("--secret-code");
-        var moduleNameOption = new Option<string>("--module-name") { IsRequired = true };
+        var moduleNameOption = new Option<string>("--module-name", "Module name in PascalCase (must start with letter, after digits use uppercase: e.g., SmsModule2Test)") { IsRequired = true };
         var templateOption = new Option<string>("--template-key", () => "Empty");
         var dbTypeOption = new Option<string>("--db-type", () => "mssql");
         var patternOption = new Option<string>("--pattern", () => "Service");
@@ -796,11 +796,11 @@ public sealed class CliApplication
 
     private Command BuildModuleRemoveCommand(Option<bool> verboseOption)
     {
-        var command = new Command("remove", "Remove module from project. ⚠️ Warning: Once deleted, your data cannot be recovered.");
+        var command = new Command("remove", "Remove module from project. ⚠️ Warning: Once deleted, your data cannot be recovered. Example: quickcode demo modules remove --module-name UserManager");
         var projectOption = new Option<string?>("--project");
         var emailOption = new Option<string?>("--email");
         var secretOption = new Option<string?>("--secret-code");
-        var moduleNameOption = new Option<string>("--module-name") { IsRequired = true };
+        var moduleNameOption = new Option<string>("--module-name", "Module name in PascalCase (must start with letter, after digits use uppercase: e.g., SmsModule2Test)") { IsRequired = true };
 
         command.AddOption(projectOption);
         command.AddOption(emailOption);

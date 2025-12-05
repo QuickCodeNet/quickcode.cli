@@ -87,16 +87,18 @@ quickcode demo validate
 quickcode demo modules
 
 # 7. Yeni modül ekle (--module-name dışındaki tüm parametreler opsiyonel, varsayılan değerlere sahip)
-quickcode demo modules add --module-name MyModule
+quickcode demo modules add --module-name UserManager
 # Veya tüm parametrelerle açıkça:
-quickcode demo modules add --module-name MyModule --template-key UserManager --db-type mssql --pattern Service
+quickcode demo modules add --module-name ProductModule --template-key UserManager --db-type mssql --pattern Service
+# Modül adı PascalCase formatında olmalı: harf ile başlamalı, rakamdan sonra büyük harf kullanılmalı (örn: SmsModule2Test)
 # Varsayılan değerler: --template-key=Empty, --db-type=mssql, --pattern=Service
 # Geçerli db-type değerleri: mssql, mysql, postgresql
 # Geçerli pattern değerleri: Service, CqrsAndMediator
 # Not: Modül eklerken template DBML'i otomatik olarak local'e indirilir ve kaydedilir
 
 # 8. Modül sil
-quickcode demo modules remove --module-name MyModule
+quickcode demo modules remove --module-name UserManager
+# Modül adı PascalCase formatında olmalı: harf ile başlamalı, rakamdan sonra büyük harf kullanılmalı (örn: SmsModule2Test)
 
 # 9. Proje & template DBML dosyalarını indir
 quickcode demo get-dbmls
@@ -151,16 +153,18 @@ dotnet run --project src/QuickCode.Cli -- demo validate
 dotnet run --project src/QuickCode.Cli -- demo modules
 
 # 7. Yeni modül ekle (--module-name dışındaki tüm parametreler opsiyonel, varsayılan değerlere sahip)
-dotnet run --project src/QuickCode.Cli -- demo modules add --module-name MyModule
+dotnet run --project src/QuickCode.Cli -- demo modules add --module-name UserManager
 # Veya tüm parametrelerle açıkça:
-dotnet run --project src/QuickCode.Cli -- demo modules add --module-name MyModule --template-key UserManager --db-type mssql --pattern Service
+dotnet run --project src/QuickCode.Cli -- demo modules add --module-name ProductModule --template-key UserManager --db-type mssql --pattern Service
+# Modül adı PascalCase formatında olmalı: harf ile başlamalı, rakamdan sonra büyük harf kullanılmalı (örn: SmsModule2Test)
 # Varsayılan değerler: --template-key=Empty, --db-type=mssql, --pattern=Service
 # Geçerli db-type değerleri: mssql, mysql, postgresql
 # Geçerli pattern değerleri: Service, CqrsAndMediator
 # Not: Modül eklerken template DBML'i otomatik olarak local'e indirilir ve kaydedilir
 
 # 8. Modül sil
-dotnet run --project src/QuickCode.Cli -- demo modules remove --module-name MyModule
+dotnet run --project src/QuickCode.Cli -- demo modules remove --module-name UserManager
+# Modül adı PascalCase formatında olmalı: harf ile başlamalı, rakamdan sonra büyük harf kullanılmalı (örn: SmsModule2Test)
 
 # 9. Proje & template DBML dosyalarını indir
 dotnet run --project src/QuickCode.Cli -- demo get-dbmls

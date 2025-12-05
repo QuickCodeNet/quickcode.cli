@@ -87,16 +87,18 @@ quickcode demo validate
 quickcode demo modules
 
 # 7. Add a new module (all parameters except --module-name are optional with defaults)
-quickcode demo modules add --module-name MyModule
+quickcode demo modules add --module-name UserManager
 # Or with all parameters explicitly:
-quickcode demo modules add --module-name MyModule --template-key UserManager --db-type mssql --pattern Service
+quickcode demo modules add --module-name ProductModule --template-key UserManager --db-type mssql --pattern Service
+# Module name must be in PascalCase: start with letter, after digits use uppercase (e.g., SmsModule2Test)
 # Default values: --template-key=Empty, --db-type=mssql, --pattern=Service
 # Valid db-type values: mssql, mysql, postgresql
 # Valid pattern values: Service, CqrsAndMediator
 # Note: Adding a module automatically downloads and saves the template DBML locally
 
 # 8. Remove a module
-quickcode demo modules remove --module-name MyModule
+quickcode demo modules remove --module-name UserManager
+# Module name must be in PascalCase: start with letter, after digits use uppercase (e.g., SmsModule2Test)
 
 # 9. Download project & template DBML files
 quickcode demo get-dbmls
@@ -151,16 +153,18 @@ dotnet run --project src/QuickCode.Cli -- demo validate
 dotnet run --project src/QuickCode.Cli -- demo modules
 
 # 7. Add a new module (all parameters except --module-name are optional with defaults)
-dotnet run --project src/QuickCode.Cli -- demo modules add --module-name MyModule
+dotnet run --project src/QuickCode.Cli -- demo modules add --module-name UserManager
 # Or with all parameters explicitly:
-dotnet run --project src/QuickCode.Cli -- demo modules add --module-name MyModule --template-key UserManager --db-type mssql --pattern Service
+dotnet run --project src/QuickCode.Cli -- demo modules add --module-name ProductModule --template-key UserManager --db-type mssql --pattern Service
+# Module name must be in PascalCase: start with letter, after digits use uppercase (e.g., SmsModule2Test)
 # Default values: --template-key=Empty, --db-type=mssql, --pattern=Service
 # Valid db-type values: mssql, mysql, postgresql
 # Valid pattern values: Service, CqrsAndMediator
 # Note: Adding a module automatically downloads and saves the template DBML locally
 
 # 8. Remove a module
-dotnet run --project src/QuickCode.Cli -- demo modules remove --module-name MyModule
+dotnet run --project src/QuickCode.Cli -- demo modules remove --module-name UserManager
+# Module name must be in PascalCase: start with letter, after digits use uppercase (e.g., SmsModule2Test)
 
 # 9. Download project & template DBML files
 dotnet run --project src/QuickCode.Cli -- demo get-dbmls
