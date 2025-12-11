@@ -36,7 +36,7 @@ brew upgrade quickcode-cli
 
 ### Windows (Scoop) - Recommended
 ```powershell
-scoop bucket add quickcode-cli https://github.com/QuickCodeNet/scoop-bucket
+scoop bucket add quickcode-cli https://github.com/QuickCodeNet/quickcode-bucket
 scoop install quickcode-cli
 ```
 

@@ -513,7 +513,7 @@ jobs:
           fi
           
           VERSION="${{ steps.version.outputs.version }}"
-          BUCKET_REPO="QuickCodeNet/scoop-bucket"
+          BUCKET_REPO="QuickCodeNet/quickcode-bucket"
           
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -567,7 +567,7 @@ jobs:
             
             #### Windows (Scoop)
             ```powershell
-            scoop bucket add quickcode-cli https://github.com/QuickCodeNet/scoop-bucket
+            scoop bucket add quickcode-cli https://github.com/QuickCodeNet/quickcode-bucket
             scoop install quickcode-cli
             ```
             
