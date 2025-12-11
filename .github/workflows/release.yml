@@ -390,6 +390,7 @@ jobs:
           
             def install
               bin.install "quickcode"
+              bin.install_symlink "quickcode" => "qc"
             end
           
             test do

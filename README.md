@@ -40,6 +40,22 @@ scoop bucket add quickcode-cli https://github.com/QuickCodeNet/quickcode-cli-buc
 scoop install quickcode-cli
 ```
 
+> **Optional: Add `qc` alias (shortcut)**
+> 
+> On macOS/Linux, `qc` is automatically available after installation via Homebrew.
+> 
+> On Windows, add this to your PowerShell profile to use `qc` instead of `quickcode`:
+> ```powershell
+> # Find your profile path
+> $PROFILE
+> 
+> # Add alias (run once)
+> Add-Content $PROFILE "`nSet-Alias -Name qc -Value quickcode"
+> 
+> # Reload profile or restart PowerShell
+> . $PROFILE
+> ```
+
 ### Manual Installation
 1. Download the latest release from [GitHub Releases](https://github.com/QuickCodeNet/quickcode.cli/releases/latest)
 2. Extract the archive for your platform:
@@ -68,6 +84,8 @@ You can run the CLI either from the repository root (recommended) or from inside
 ```bash
 # 1. CLI help
 quickcode --help
+# Or use the shorter alias (macOS/Linux: automatic, Windows: see installation section)
+qc --help
 
 # 2. Check if project exists
 quickcode demo check

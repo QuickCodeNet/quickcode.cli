@@ -40,6 +40,22 @@ scoop bucket add quickcode-cli https://github.com/QuickCodeNet/quickcode-cli-buc
 scoop install quickcode-cli
 ```
 
+> **Opsiyonel: `qc` alias'ı ekle (kısayol)**
+> 
+> macOS/Linux'ta Homebrew ile kurulumdan sonra `qc` otomatik olarak kullanılabilir.
+> 
+> Windows'ta `quickcode` yerine `qc` kullanmak için PowerShell profile'ına şunu ekle:
+> ```powershell
+> # Profile yolunu bul
+> $PROFILE
+> 
+> # Alias ekle (bir kez çalıştır)
+> Add-Content $PROFILE "`nSet-Alias -Name qc -Value quickcode"
+> 
+> # Profile'ı yeniden yükle veya PowerShell'i yeniden başlat
+> . $PROFILE
+> ```
+
 ### Manuel Kurulum
 1. [GitHub Releases](https://github.com/QuickCodeNet/quickcode.cli/releases/latest) sayfasından en son sürümü indir
 2. Platformunuza uygun arşivi çıkar:
@@ -68,6 +84,8 @@ CLI’yi repository kökünden (önerilir) veya proje klasörü içinden çalı�
 ```bash
 # 1. Yardım
 quickcode --help
+# Veya daha kısa alias kullan (macOS/Linux: otomatik, Windows: kurulum bölümüne bak)
+qc --help
 
 # 2. Projenin var olup olmadığını kontrol et
 quickcode demo check
