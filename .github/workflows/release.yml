@@ -242,8 +242,14 @@ jobs:
           
           # Find and extract SHA256 from checksum files
           # Artifacts are organized by RID in subdirectories
+          
+          # macOS checksums (for Homebrew)
           ARM64_FILE=$(find artifacts -name "quickcode-cli-osx-arm64-v${VERSION}.tar.gz.sha256" -type f | head -1)
           X64_FILE=$(find artifacts -name "quickcode-cli-osx-x64-v${VERSION}.tar.gz.sha256" -type f | head -1)
+          
+          # Windows checksums (for Scoop)
+          WIN_X64_FILE=$(find artifacts -name "quickcode-cli-win-x64-v${VERSION}.zip.sha256" -type f | head -1)
+          WIN_ARM64_FILE=$(find artifacts -name "quickcode-cli-win-arm64-v${VERSION}.zip.sha256" -type f | head -1)
           
           if [ -n "$ARM64_FILE" ]; then
             ARM64_SHA=$(cat "$ARM64_FILE" | awk '{print $1}')
@@ -282,19 +288,65 @@ jobs:
           
           if [ -n "$X64_SHA" ]; then
             echo "x64_sha=${X64_SHA}" >> $GITHUB_OUTPUT
-            echo "✅ x64 checksum extracted: ${X64_SHA:0:16}..."
+            echo "✅ macOS x64 checksum extracted: ${X64_SHA:0:16}..."
           else
             echo "x64_sha=" >> $GITHUB_OUTPUT
-            echo "⚠️ Warning: x64 checksum not found"
+            echo "⚠️ Warning: macOS x64 checksum not found"
+          fi
+          
+          # Extract Windows checksums
+          if [ -n "$WIN_X64_FILE" ]; then
+            WIN_X64_SHA=$(cat "$WIN_X64_FILE" | awk '{print $1}')
+            echo "✅ Found Windows x64 checksum: ${WIN_X64_FILE}"
+          else
+            echo "⚠️ Warning: Windows x64 checksum file not found, trying alternative..."
+            WIN_X64_FILE=$(find artifacts -path "*/win-x64/*" -name "*.sha256" | head -1)
+            if [ -n "$WIN_X64_FILE" ]; then
+              WIN_X64_SHA=$(cat "$WIN_X64_FILE" | awk '{print $1}')
+              echo "✅ Found Windows x64 checksum (alternative): ${WIN_X64_FILE}"
+            fi
+          fi
+          
+          if [ -n "$WIN_ARM64_FILE" ]; then
+            WIN_ARM64_SHA=$(cat "$WIN_ARM64_FILE" | awk '{print $1}')
+            echo "✅ Found Windows ARM64 checksum: ${WIN_ARM64_FILE}"
+          else
+            echo "⚠️ Warning: Windows ARM64 checksum file not found, trying alternative..."
+            WIN_ARM64_FILE=$(find artifacts -path "*/win-arm64/*" -name "*.sha256" | head -1)
+            if [ -n "$WIN_ARM64_FILE" ]; then
+              WIN_ARM64_SHA=$(cat "$WIN_ARM64_FILE" | awk '{print $1}')
+              echo "✅ Found Windows ARM64 checksum (alternative): ${WIN_ARM64_FILE}"
+            fi
+          fi
+          
+          if [ -n "$WIN_X64_SHA" ]; then
+            echo "win_x64_sha=${WIN_X64_SHA}" >> $GITHUB_OUTPUT
+            echo "✅ Windows x64 checksum extracted: ${WIN_X64_SHA:0:16}..."
+          else
+            echo "win_x64_sha=" >> $GITHUB_OUTPUT
+            echo "⚠️ Warning: Windows x64 checksum not found"
+          fi
+          
+          if [ -n "$WIN_ARM64_SHA" ]; then
+            echo "win_arm64_sha=${WIN_ARM64_SHA}" >> $GITHUB_OUTPUT
+            echo "✅ Windows ARM64 checksum extracted: ${WIN_ARM64_SHA:0:16}..."
+          else
+            echo "win_arm64_sha=" >> $GITHUB_OUTPUT
+            echo "⚠️ Warning: Windows ARM64 checksum not found"
           fi
           
           echo "repo=${REPO}" >> $GITHUB_OUTPUT
           
           if [ -z "$ARM64_SHA" ] || [ -z "$X64_SHA" ]; then
-            echo "⚠️ Warning: Some checksums are missing. Homebrew formula may not be generated."
-            echo "Available checksum files:"
-            find artifacts -name "*.sha256" || true
+            echo "⚠️ Warning: Some macOS checksums are missing. Homebrew formula may not be generated."
           fi
+          
+          if [ -z "$WIN_X64_SHA" ] || [ -z "$WIN_ARM64_SHA" ]; then
+            echo "⚠️ Warning: Some Windows checksums are missing. Scoop manifest may not be generated."
+          fi
+          
+          echo "Available checksum files:"
+          find artifacts -name "*.sha256" || true
 
       - name: Generate Homebrew Formula
         shell: bash
@@ -388,6 +440,97 @@ jobs:
           git push origin main
           
           echo "✅ Homebrew Tap updated automatically!"
+
+      - name: Generate Scoop Manifest
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          REPO="${{ steps.checksums.outputs.repo }}"
+          WIN_X64_SHA="${{ steps.checksums.outputs.win_x64_sha }}"
+          WIN_ARM64_SHA="${{ steps.checksums.outputs.win_arm64_sha }}"
+          
+          # Check if checksums are available
+          if [ -z "$WIN_X64_SHA" ] || [ -z "$WIN_ARM64_SHA" ]; then
+            echo "⚠️ Warning: Some Windows checksums are missing. Skipping Scoop manifest generation."
+            echo "  WIN_X64_SHA: ${WIN_X64_SHA:-NOT FOUND}"
+            echo "  WIN_ARM64_SHA: ${WIN_ARM64_SHA:-NOT FOUND}"
+            exit 0
+          fi
+          
+          mkdir -p bucket
+          
+          cat > bucket/quickcode-cli.json << EOF
+          {
+            "version": "${VERSION}",
+            "description": "QuickCode API CLI Tool - A .NET 10 console application for managing QuickCode projects from the terminal",
+            "homepage": "https://github.com/${REPO}",
+            "license": "MIT",
+            "architecture": {
+              "64bit": {
+                "url": "https://github.com/${REPO}/releases/download/v${VERSION}/quickcode-cli-win-x64-v${VERSION}.zip",
+                "hash": "${WIN_X64_SHA}"
+              },
+              "arm64": {
+                "url": "https://github.com/${REPO}/releases/download/v${VERSION}/quickcode-cli-win-arm64-v${VERSION}.zip",
+                "hash": "${WIN_ARM64_SHA}"
+              }
+            },
+            "bin": "quickcode.exe",
+            "checkver": {
+              "github": "${REPO}"
+            },
+            "autoupdate": {
+              "architecture": {
+                "64bit": {
+                  "url": "https://github.com/${REPO}/releases/download/v\$version/quickcode-cli-win-x64-v\$version.zip"
+                },
+                "arm64": {
+                  "url": "https://github.com/${REPO}/releases/download/v\$version/quickcode-cli-win-arm64-v\$version.zip"
+                }
+              }
+            }
+          }
+          EOF
+          
+          echo "✅ Scoop manifest generated successfully!"
+
+      - name: Upload Scoop Manifest Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scoop-manifest
+          path: bucket/quickcode-cli.json
+          retention-days: 90
+
+      - name: Update Scoop Bucket (Optional - Auto Push)
+        shell: bash
+        env:
+          SCOOP_BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
+        run: |
+          # Check if token exists
+          if [ -z "$SCOOP_BUCKET_TOKEN" ]; then
+            echo "⚠️ SCOOP_BUCKET_TOKEN not set, skipping Scoop Bucket update"
+            exit 0
+          fi
+          
+          VERSION="${{ steps.version.outputs.version }}"
+          BUCKET_REPO="QuickCodeNet/scoop-bucket"
+          
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Clone bucket repository
+          git clone https://${SCOOP_BUCKET_TOKEN}@github.com/${BUCKET_REPO}.git scoop-bucket
+          cd scoop-bucket
+          
+          # Copy manifest
+          cp ../bucket/quickcode-cli.json quickcode-cli.json
+          
+          # Commit and push
+          git add quickcode-cli.json
+          git commit -m "Update quickcode-cli to v${VERSION}" || exit 0
+          git push origin main
+          
+          echo "✅ Scoop Bucket updated automatically!"
 
       - name: Create Tag (if workflow_dispatch or branch push)
         if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/'))
