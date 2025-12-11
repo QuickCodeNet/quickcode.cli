@@ -504,7 +504,7 @@ jobs:
       - name: Update Scoop Bucket (Optional - Auto Push)
         shell: bash
         env:
-          SCOOP_BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
+          SCOOP_BUCKET_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           # Check if token exists
           if [ -z "$SCOOP_BUCKET_TOKEN" ]; then
@@ -519,7 +519,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
           # Clone bucket repository
-          git clone https://${SCOOP_BUCKET_TOKEN}@github.com/${BUCKET_REPO}.git scoop-bucket
+          git clone https://${HOMEBREW_TAP_TOKEN}@github.com/${BUCKET_REPO}.git scoop-bucket
           cd scoop-bucket
           
           # Copy manifest
