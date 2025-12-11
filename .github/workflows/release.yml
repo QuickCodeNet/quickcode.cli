@@ -519,7 +519,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
           # Clone bucket repository
-          git clone https://${HOMEBREW_TAP_TOKEN}@github.com/${BUCKET_REPO}.git scoop-bucket
+          git clone https://${SCOOP_BUCKET_TOKEN}@github.com/${BUCKET_REPO}.git scoop-bucket
           cd scoop-bucket
           
           # Copy manifest
