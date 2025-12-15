@@ -1386,6 +1386,9 @@ public sealed class CliApplication
         // Archive existing DBML files before downloading new ones (only project-level files, not templates)
         ArchiveExistingDbmlFiles(projectDir);
 
+        // Delete all .dbml files from templates directory (templates are always re-downloaded)
+        DeleteTemplatesDbmlFiles(templatesDir);
+
         await DownloadProjectReadmeAsync(projectDir);
 
         using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
@@ -1507,6 +1510,45 @@ public sealed class CliApplication
         Console.WriteLine(new string('=', 60));
         Console.WriteLine($"📁 Project files saved to: {projectDir}");
         Console.WriteLine($"📁 Template files saved to: {templatesDir}");
+    }
+
+    private static void DeleteTemplatesDbmlFiles(string templatesDir)
+    {
+        if (!Directory.Exists(templatesDir))
+        {
+            return;
+        }
+
+        var templateDbmlFiles = Directory.GetFiles(templatesDir, "*.dbml", SearchOption.AllDirectories);
+
+        if (templateDbmlFiles.Length == 0)
+        {
+            return;
+        }
+
+        Console.WriteLine($"🗑️  Deleting {templateDbmlFiles.Length} existing DBML file(s) from templates folder...");
+
+        var deletedCount = 0;
+        foreach (var dbmlFile in templateDbmlFiles)
+        {
+            try
+            {
+                File.Delete(dbmlFile);
+                deletedCount++;
+                var relativePath = Path.GetRelativePath(templatesDir, dbmlFile);
+                Console.WriteLine($"   🗑️  Deleted {relativePath}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"   ⚠️ Failed to delete {Path.GetFileName(dbmlFile)}: {ex.Message}");
+            }
+        }
+
+        if (deletedCount > 0)
+        {
+            Console.WriteLine($"✅ Deleted {deletedCount} file(s) from templates folder");
+            Console.WriteLine();
+        }
     }
 
     private static void ArchiveExistingDbmlFiles(string projectDir)
