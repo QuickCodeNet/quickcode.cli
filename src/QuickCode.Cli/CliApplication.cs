@@ -1383,6 +1383,9 @@ public sealed class CliApplication
             Console.WriteLine($"📁 Created templates directory: {templatesDir}");
         }
 
+        // Archive existing DBML files before downloading new ones (only project-level files, not templates)
+        ArchiveExistingDbmlFiles(projectDir);
+
         await DownloadProjectReadmeAsync(projectDir);
 
         using var client = new QuickCodeApiClient(config.ApiUrl, verbose);
@@ -1504,6 +1507,72 @@ public sealed class CliApplication
         Console.WriteLine(new string('=', 60));
         Console.WriteLine($"📁 Project files saved to: {projectDir}");
         Console.WriteLine($"📁 Template files saved to: {templatesDir}");
+    }
+
+    private static void ArchiveExistingDbmlFiles(string projectDir)
+    {
+        // Find all .dbml files in project directory (top-level only)
+        // Note: Templates folder is not archived as it's always re-downloaded
+        var projectDbmlFiles = Directory.Exists(projectDir)
+            ? Directory.GetFiles(projectDir, "*.dbml", SearchOption.TopDirectoryOnly)
+            : Array.Empty<string>();
+
+        if (projectDbmlFiles.Length == 0)
+        {
+            // No existing DBML files to archive
+            return;
+        }
+
+        // Create archive directory
+        var archiveDir = Path.Combine(projectDir, "archive");
+        if (!Directory.Exists(archiveDir))
+        {
+            Directory.CreateDirectory(archiveDir);
+        }
+
+        // Create timestamped subfolder (format: yyyy-MM-dd_HH-mm-ss)
+        var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+        var archiveSubDir = Path.Combine(archiveDir, timestamp);
+        Directory.CreateDirectory(archiveSubDir);
+
+        Console.WriteLine($"📦 Archiving {projectDbmlFiles.Length} existing DBML file(s) to archive/{timestamp}/...");
+
+        var archivedCount = 0;
+        foreach (var dbmlFile in projectDbmlFiles)
+        {
+            try
+            {
+                var fileName = Path.GetFileName(dbmlFile);
+                var archiveFilePath = Path.Combine(archiveSubDir, fileName);
+
+                // If a file with the same name already exists in archive, add a counter suffix
+                var counter = 1;
+                while (File.Exists(archiveFilePath))
+                {
+                    var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+                    var ext = Path.GetExtension(fileName);
+                    archiveFilePath = Path.Combine(archiveSubDir, $"{nameWithoutExt}_{counter}{ext}");
+                    counter++;
+                }
+
+                File.Move(dbmlFile, archiveFilePath);
+                archivedCount++;
+
+                var relativePath = Path.GetRelativePath(projectDir, dbmlFile);
+                var archiveRelativePath = Path.GetRelativePath(projectDir, archiveFilePath);
+                Console.WriteLine($"   📄 Moved {relativePath} → {archiveRelativePath}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"   ⚠️ Failed to archive {Path.GetFileName(dbmlFile)}: {ex.Message}");
+            }
+        }
+
+        if (archivedCount > 0)
+        {
+            Console.WriteLine($"✅ Archived {archivedCount} file(s) to archive/{timestamp}/");
+            Console.WriteLine();
+        }
     }
 
     private static async Task DownloadProjectReadmeAsync(string projectDir)
